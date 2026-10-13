@@ -335,6 +335,11 @@ struct NewRLQPController_DLLAPI NewRLQPController : public mc_control::fsm::Cont
   std::vector<Eigen::Vector3d> velCmdReplayCmd_;
   size_t velCmdReplayIdx_ = 0;
   double velCmdReplayElapsed_ = 0.0;
+  // vel_cmd_replay_arm_after (s, < 0 = off): arm the policy by itself that
+  // long after start, under mc_mujoco only, for headless replays where no one
+  // can press 'ARM policy'.
+  double velCmdReplayArmAfter_ = -1.0;
+  double velCmdReplayClock_ = 0.0;
   void applyVelCmdReplay();
 
   Eigen::Vector3d currentVelCmd_ = Eigen::Vector3d::Zero();

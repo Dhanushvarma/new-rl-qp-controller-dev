@@ -459,6 +459,8 @@ void NewRLQPController::initializeRobot()
   velCmdReplayCmd_.clear();
   velCmdReplayIdx_ = 0;
   velCmdReplayElapsed_ = 0.0;
+  velCmdReplayClock_ = 0.0;
+  velCmdReplayArmAfter_ = config_("vel_cmd_replay_arm_after", -1.0);
   const std::string velCmdReplayPath = config_("vel_cmd_replay", std::string(""));
   if(!velCmdReplayPath.empty())
   {
@@ -1245,6 +1247,14 @@ void NewRLQPController::updateVelocityCommand()
 void NewRLQPController::applyVelCmdReplay()
 {
   if(velCmdReplayCmd_.empty()) return;
+  velCmdReplayClock_ += timeStep;
+  if(!policyArmed_ && velCmdReplayArmAfter_ >= 0.0 && velCmdReplayClock_ >= velCmdReplayArmAfter_ && isSimulated())
+  {
+    policyArmed_ = true;
+    velCmdReplayArmAfter_ = -1.0;  // once: a later disarm (runaway guard) stays disarmed
+    mc_rtc::log::warning("[NewRLQPController] vel_cmd_replay: policy ARMED automatically at {:.2f} s",
+                         velCmdReplayClock_);
+  }
   if(!policyArmed_)
   {
     velCmdReplayIdx_ = 0;

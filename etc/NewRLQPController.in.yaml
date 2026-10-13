@@ -83,7 +83,7 @@ policy_path: [
   # reference de vitesse, interpolation sur 2 pas de 1 ms) et un modele de
   # frottement articulaire. NOUVEAUX gains PD (HRP5P_PD_GAINS) et nouvelle
   # action_scale, voir plus bas ; physique a 1 ms, decimation 10.
-  "@RL_POLICY_INSTALL_PREFIX@/cop2.onnx",
+  "@RL_POLICY_INSTALL_PREFIX@/push.onnx",
 ]
 # Exige MainRobot: HRP5P dans mc_rtc.yaml (module mc_hrp5_p).
 default_policy_index: 0
@@ -130,7 +130,7 @@ policies:
     zero_vel_ref: true
     # refVel de la PostureTask (vitesse desiree dans le QP). false = refVel a 0
     # et integrale libre de la vitesse comme a l'entrainement.
-    posture_ref_vel: true
+    posture_ref_vel: false
     use_torque_task: false
     qp_accel_task: false
     joint_armature: 1.0
