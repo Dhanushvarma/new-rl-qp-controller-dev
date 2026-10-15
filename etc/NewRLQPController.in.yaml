@@ -83,7 +83,7 @@ policy_path: [
   # reference de vitesse, interpolation sur 2 pas de 1 ms) et un modele de
   # frottement articulaire. NOUVEAUX gains PD (HRP5P_PD_GAINS) et nouvelle
   # action_scale, voir plus bas ; physique a 1 ms, decimation 10.
-  "@RL_POLICY_INSTALL_PREFIX@/push.onnx",
+  "@RL_POLICY_INSTALL_PREFIX@/push4.onnx",
 ]
 # Exige MainRobot: HRP5P dans mc_rtc.yaml (module mc_hrp5_p).
 default_policy_index: 0
@@ -320,11 +320,17 @@ policies:
     # les metadonnees action_scale de policy/hrp5_collisions.onnx (arrondies a 3
     # decimales) : les 33 entrees concordent.
     action_scale: &hrp5p_action_scale
-      # hrp5_mirror.onnx : valeurs pleine precision recopiees de
-      # actions.joint_pos.scale dans params/env.yaml du run
-      # 2026-10-05_11-39-28 (recoupees avec les metadonnees action_scale de
-      # l'onnx, 3 decimales). Les commentaires WP/RWRR ci-dessous datent
-      # d'une echelle plus ancienne.
+      # Valeurs de hrp5_mirror (run 2026-10-05_11-39-28). ATTENTION pour
+      # vel0qp / push / push4 : l'onnx et params/env.yaml annoncent une echelle
+      # x11 (RCY 2.1409...), mais elle compense le filtre PostureTask de
+      # l'entrainement SANS refVel (posture_task_vel_feedforward: false) avec
+      # q_rl re-seede sur la sortie du QP : vitesse realisee = 0.10 x commande
+      # (K dt / Kv = 1600*0.005/80, cf. posture_task_step de mjlab), soit
+      # 2.14 x 0.10 = 0.214 rad/s par unite d'action. Le deploiement actuel
+      # (posture_ref_vel: false) integre q_rl librement (gain ~1) : l'echelle
+      # x11 y fait exploser le robot, ces valeurs-ci (0.1946 x 1) en sont a ~9 %
+      # pres. Pour un match exact : echelle x11 ET q_rl re-seede sans refVel.
+      # Les commentaires WP/RWRR ci-dessous datent d'une echelle plus ancienne.
       RCY:  0.19462447208111955
       RCR:  0.31330676491966813
       RCP:  0.2587348898824309
