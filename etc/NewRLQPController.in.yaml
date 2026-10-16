@@ -83,7 +83,7 @@ policy_path: [
   # reference de vitesse, interpolation sur 2 pas de 1 ms) et un modele de
   # frottement articulaire. NOUVEAUX gains PD (HRP5P_PD_GAINS) et nouvelle
   # action_scale, voir plus bas ; physique a 1 ms, decimation 10.
-  "@RL_POLICY_INSTALL_PREFIX@/push4.onnx",
+  "@RL_POLICY_INSTALL_PREFIX@/push7.onnx",
 ]
 # Exige MainRobot: HRP5P dans mc_rtc.yaml (module mc_hrp5_p).
 default_policy_index: 0
@@ -140,9 +140,11 @@ policies:
                                # sert seulement a un avertissement dans configRL()
     pd_gains_ratio: 1.0
     posture_stiffness: 1600
-    max_vel_x: 0.3
-    max_vel_y: 0.2
-    max_yaw: 0.45
+    # Plages de commande de push6 / push7 (meme run mjlab 2026-10-15_18-31-35,
+    # push7 = dernier export : lin_vel_x +-0.6, lin_vel_y +-0.4, ang_vel_z +-0.8).
+    max_vel_x: 0.6
+    max_vel_y: 0.4
+    max_yaw: 0.8
     joystick_deadzone: 0.05
     vel_ramp_rate: 0.5
     torque_feasibility_ratio: 1.0
