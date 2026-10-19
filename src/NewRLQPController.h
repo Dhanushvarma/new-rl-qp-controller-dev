@@ -340,6 +340,14 @@ struct NewRLQPController_DLLAPI NewRLQPController : public mc_control::fsm::Cont
   // can press 'ARM policy'.
   double velCmdReplayArmAfter_ = -1.0;
   double velCmdReplayClock_ = 0.0;
+  // sim_push_test: [[t, fx, fy, fz, duration], ...], t in s since arming, force
+  // in N (world frame) on the floating base, sent to mc_mujoco's
+  // <robot>::ApplyForce during a vel_cmd_replay run. Simulation only.
+  std::vector<std::array<double, 5>> simPushTest_;
+  size_t simPushIdx_ = 0;
+  // sim_push_body: body the sim_push_test forces are applied to (default: the
+  // floating base).
+  std::string simPushBody_;
   void applyVelCmdReplay();
 
   Eigen::Vector3d currentVelCmd_ = Eigen::Vector3d::Zero();
@@ -585,6 +593,21 @@ struct NewRLQPController_DLLAPI NewRLQPController : public mc_control::fsm::Cont
   // switches to the free-running integral of training rather than re-seeding
   // from the QP output, which needs refVel (utils.cpp, velocity_action branch).
   bool zeroVelRef_ = false;
+  // Per-policy key qp_reseed_integral (optional): under the QP, re-seed q_rl
+  // on the QP's previous output every tick (true) or integrate it freely
+  // (false). Absent (-1): re-seed unless zero_vel_ref with posture_ref_vel
+  // off. mjlab's posture_task_filter without refVel (vel_feedforward false,
+  // seed_lag 0) is the re-seeded form, whose realised velocity is only
+  // K dt / Kv = 0.10 x the command -- hence the x11 action scale of those runs.
+  int qpReseedIntegral_ = -1;
+  /** Whether q_rl is re-seeded on the QP output (velocity_action under the
+   *  QP), from qpReseedIntegral_ / zeroVelRef_ / postureRefVel_. Used by
+   *  utils.cpp and logged as NewRLQPController_reseedQRl. */
+  bool reseedQRl() const;
+  /** Compares action_scale with the action_scale metadata of the current
+   *  policy's onnx (ref_joint_order), and throws on a mismatch unless the
+   *  policy block sets allow_action_scale_mismatch: true. */
+  void checkActionScaleAgainstOnnx();
 
   // Joystick loss latch, see updateVelocityCommand(). mc_joystick_plugin's
   // Joystick::connected only means "its fd was opened once": after an unplug

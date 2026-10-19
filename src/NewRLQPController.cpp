@@ -4,6 +4,7 @@
 #include <cmath>
 #include <map>
 #include <filesystem>
+#include <sstream>
 
 #include <mc_rtc/io_utils.h>
 
@@ -461,6 +462,22 @@ void NewRLQPController::initializeRobot()
   velCmdReplayElapsed_ = 0.0;
   velCmdReplayClock_ = 0.0;
   velCmdReplayArmAfter_ = config_("vel_cmd_replay_arm_after", -1.0);
+  simPushTest_.clear();
+  simPushIdx_ = 0;
+  simPushBody_ = config_("sim_push_body", std::string(""));
+  if(config_.has("sim_push_test"))
+  {
+    const std::vector<std::vector<double>> pushes = config_("sim_push_test");
+    for(const auto & p : pushes)
+    {
+      if(p.size() != 5)
+      {
+        mc_rtc::log::error_and_throw<std::runtime_error>(
+            "[NewRLQPController] sim_push_test entries are [t, fx, fy, fz, duration]");
+      }
+      simPushTest_.push_back({p[0], p[1], p[2], p[3], p[4]});
+    }
+  }
   const std::string velCmdReplayPath = config_("vel_cmd_replay", std::string(""));
   if(!velCmdReplayPath.empty())
   {
@@ -504,6 +521,13 @@ void NewRLQPController::initializeRobot()
   // gets one: see zeroVelRef_ in the header. zero_vel_ref overrides
   // qp_zero_vel_out; both reset the GUI's posture refVel toggle on load.
   zeroVelRef_ = config_("policies")[currentPolicyIndex]("zero_vel_ref", false);
+  qpReseedIntegral_ = -1;
+  if(config_("policies")[currentPolicyIndex].has("qp_reseed_integral"))
+  {
+    qpReseedIntegral_ = config_("policies")[currentPolicyIndex]("qp_reseed_integral") ? 1 : 0;
+    mc_rtc::log::info("[NewRLQPController] qp_reseed_integral: {}", qpReseedIntegral_ ? "re-seeded on QP output"
+                                                                                       : "free-running");
+  }
   postureRefVel_ = config_("policies")[currentPolicyIndex]("posture_ref_vel", true);
   if(zeroVelRef_)
   {
@@ -514,6 +538,7 @@ void NewRLQPController::initializeRobot()
   {
     mc_rtc::log::info("[NewRLQPController] posture_ref_vel false: PostureTask refVel held at 0");
   }
+  checkActionScaleAgainstOnnx();
 
 
   // Velocity damper, off unless the policy declares velocity_damper_di.
@@ -1244,6 +1269,79 @@ void NewRLQPController::updateVelocityCommand()
   }
 }
 
+bool NewRLQPController::reseedQRl() const
+{
+  // Not under pass-through nor with an actuation delay (utils.cpp,
+  // velocity_action block); qp_reseed_integral overrides the default, which
+  // re-seeds unless zero_vel_ref runs with posture_ref_vel off.
+  const bool reseed = qpReseedIntegral_ >= 0 ? (qpReseedIntegral_ == 1) : !(zeroVelRef_ && !postureRefVel_);
+  return useQP_ && !posturePassthrough_ && actuationDelaySteps_ == 0 && reseed;
+}
+
+void NewRLQPController::checkActionScaleAgainstOnnx()
+{
+  const auto & pol = config_("policies")[currentPolicyIndex];
+  const std::vector<std::string> paths = config_("policy_path", std::vector<std::string>{});
+  const std::vector<std::string> order = pol("ref_joint_order", std::vector<std::string>{});
+  if(currentPolicyIndex >= paths.size() || order.empty()) { return; }
+  const std::string & path = paths[currentPolicyIndex];
+  std::vector<double> meta;
+  try
+  {
+    Ort::Env env(ORT_LOGGING_LEVEL_ERROR, "action_scale_check");
+    Ort::SessionOptions opts;
+    Ort::Session session(env, path.c_str(), opts);
+    Ort::AllocatorWithDefaultOptions alloc;
+    auto value = session.GetModelMetadata().LookupCustomMetadataMapAllocated("action_scale", alloc);
+    if(!value)
+    {
+      mc_rtc::log::warning("[NewRLQPController] {} has no action_scale metadata, action_scale not checked", path);
+      return;
+    }
+    std::stringstream ss(value.get());
+    std::string tok;
+    while(std::getline(ss, tok, ',')) { meta.push_back(std::stod(tok)); }
+  }
+  catch(const std::exception & e)
+  {
+    mc_rtc::log::warning("[NewRLQPController] action_scale check skipped ({}): {}", path, e.what());
+    return;
+  }
+  if(meta.size() != order.size())
+  {
+    mc_rtc::log::warning("[NewRLQPController] {}: {} action_scale metadata entries for {} joints, not checked", path,
+                         meta.size(), order.size());
+    return;
+  }
+  std::string mismatches;
+  size_t n = 0;
+  for(size_t k = 0; k < order.size(); ++k)
+  {
+    const auto it = std::find(jointNames.begin(), jointNames.end(), order[k]);
+    if(it == jointNames.end()) { continue; }
+    const double cfg = actionScale(static_cast<int>(it - jointNames.begin()));
+    // The metadata is rounded to 3 decimals.
+    if(std::abs(cfg - meta[k]) > 6e-4 + 1e-3 * std::abs(meta[k]))
+    {
+      if(n++ < 6) { mismatches += fmt::format(" {} {:.4f} (onnx {:.3f})", order[k], cfg, meta[k]); }
+    }
+  }
+  if(n == 0)
+  {
+    mc_rtc::log::success("[NewRLQPController] action_scale matches the onnx metadata ({} joints)", order.size());
+    return;
+  }
+  const std::string msg = fmt::format("[NewRLQPController] action_scale differs from the onnx metadata on {} joints:{}{}",
+                                      n, mismatches, n > 6 ? " ..." : "");
+  if(pol("allow_action_scale_mismatch", false))
+  {
+    mc_rtc::log::warning("{} (allowed by allow_action_scale_mismatch)", msg);
+    return;
+  }
+  mc_rtc::log::error_and_throw<std::runtime_error>(
+      "{} -- fix action_scale, or set allow_action_scale_mismatch: true in the policy block", msg);
+}
+
 void NewRLQPController::applyVelCmdReplay()
 {
   if(velCmdReplayCmd_.empty()) return;
@@ -1278,6 +1376,21 @@ void NewRLQPController::applyVelCmdReplay()
     ++velCmdReplayIdx_;
   }
   currentVelCmd_ = velCmdReplayCmd_[velCmdReplayIdx_];
+  while(simPushIdx_ < simPushTest_.size() && simPushTest_[simPushIdx_][0] <= velCmdReplayElapsed_)
+  {
+    const auto & p = simPushTest_[simPushIdx_++];
+    const std::string call = robot().name() + "::ApplyForce";
+    if(!datastore().has(call))
+    {
+      mc_rtc::log::error("[NewRLQPController] sim_push_test: {} not available (mc_mujoco without ApplyForce)", call);
+      continue;
+    }
+    mc_rtc::log::warning("[NewRLQPController] sim_push_test at {:.2f} s: ({:.0f}, {:.0f}, {:.0f}) N for {:.2f} s",
+                         velCmdReplayElapsed_, p[1], p[2], p[3], p[4]);
+    datastore().call<void, const std::string &, const Eigen::Vector3d &, double>(
+        call, simPushBody_.empty() ? robot().mb().body(0).name() : simPushBody_, Eigen::Vector3d(p[1], p[2], p[3]),
+        p[4]);
+  }
   velCmdReplayElapsed_ += timeStep;
 }
 
@@ -1432,6 +1545,9 @@ void NewRLQPController::addLog()
   logger().addLogEntry("NewRLQPController_RL_actionScale",   [this]() { return actionScale; });
   logger().addLogEntry("NewRLQPController_useQP",            [this]() { return useQP_; });
   logger().addLogEntry("NewRLQPController_qpZeroVelOut",     [this]() { return qpZeroVelOut_; });
+  logger().addLogEntry("NewRLQPController_postureRefVel",    [this]() { return postureRefVel_; });
+  logger().addLogEntry("NewRLQPController_zeroVelRef",       [this]() { return zeroVelRef_; });
+  logger().addLogEntry("NewRLQPController_reseedQRl",        [this]() { return reseedQRl(); });
   logger().addLogEntry("NewRLQPController_velCmd",           [this]() { return currentVelCmd_; });
 
   if(logImpactVel_)

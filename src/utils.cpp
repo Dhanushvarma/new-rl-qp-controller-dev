@@ -152,8 +152,10 @@ void utils::run_rl_state(mc_control::fsm::Controller & ctl_)
         // the free-running integral of training, whose windup the anti-windup
         // clamp below bounds around the measurement. With refVel on, zero_vel_ref
         // keeps the re-seeded integral: it only zeroes the low-level PD's alpha.
-        const bool seedFromQP = ctl.useQP() && !ctl.posturePassthrough_ && ctl.actuationDelaySteps_ == 0
-                                && !(ctl.zeroVelRef_ && !ctl.postureRefVel_);
+        // qp_reseed_integral, when set, overrides that choice (see its doc in
+        // the header): true reproduces mjlab's posture_task_filter without
+        // refVel exactly, together with that run's x11 action scale.
+        const bool seedFromQP = ctl.reseedQRl();
         auto & rr = ctl.realRobot(ctl.robots()[0].name());
         for (int j = 0; j < ctl.currentAction.size(); ++j) {
             int i = ctl.actionToDofMap[j];

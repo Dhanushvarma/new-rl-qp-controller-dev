@@ -83,7 +83,7 @@ policy_path: [
   # reference de vitesse, interpolation sur 2 pas de 1 ms) et un modele de
   # frottement articulaire. NOUVEAUX gains PD (HRP5P_PD_GAINS) et nouvelle
   # action_scale, voir plus bas ; physique a 1 ms, decimation 10.
-  "@RL_POLICY_INSTALL_PREFIX@/push7.onnx",
+  "@RL_POLICY_INSTALL_PREFIX@/angmom.onnx",
 ]
 # Exige MainRobot: HRP5P dans mc_rtc.yaml (module mc_hrp5_p).
 default_policy_index: 0
@@ -131,6 +131,12 @@ policies:
     # refVel de la PostureTask (vitesse desiree dans le QP). false = refVel a 0
     # et integrale libre de la vitesse comme a l'entrainement.
     posture_ref_vel: false
+    # Integration de q_rl sous le QP : true = re-seede chaque pas sur la sortie du
+    # QP, sans refVel -- exactement le posture_task_filter de l'entrainement
+    # (posture_task_vel_feedforward: false, seed_lag 0), avec l'echelle x11 de ce
+    # run ci-dessous. En integrale libre + echelle /11, angmom oscille a ~5.4 Hz
+    # en roulis sous QP (sim du 2026-10-19), pas avec ce reglage.
+    qp_reseed_integral: true
     use_torque_task: false
     qp_accel_task: false
     joint_armature: 1.0
@@ -322,29 +328,25 @@ policies:
     # les metadonnees action_scale de policy/hrp5_collisions.onnx (arrondies a 3
     # decimales) : les 33 entrees concordent.
     action_scale: &hrp5p_action_scale
-      # Valeurs de hrp5_mirror (run 2026-10-05_11-39-28). ATTENTION pour
-      # vel0qp / push / push4 : l'onnx et params/env.yaml annoncent une echelle
-      # x11 (RCY 2.1409...), mais elle compense le filtre PostureTask de
-      # l'entrainement SANS refVel (posture_task_vel_feedforward: false) avec
-      # q_rl re-seede sur la sortie du QP : vitesse realisee = 0.10 x commande
-      # (K dt / Kv = 1600*0.005/80, cf. posture_task_step de mjlab), soit
-      # 2.14 x 0.10 = 0.214 rad/s par unite d'action. Le deploiement actuel
-      # (posture_ref_vel: false) integre q_rl librement (gain ~1) : l'echelle
-      # x11 y fait exploser le robot, ces valeurs-ci (0.1946 x 1) en sont a ~9 %
-      # pres. Pour un match exact : echelle x11 ET q_rl re-seede sans refVel.
+      # angmom.onnx : echelle d'entrainement pleine precision (params/env.yaml du
+      # run 2026-10-18_15-15-18), x11 par rapport a hrp5_mirror/cop2. Elle compense le
+      # filtre PostureTask sans refVel de l'entrainement (vitesse realisee = 0.10 x
+      # commande) et ne s'emploie QU'AVEC qp_reseed_integral: true. En integrale libre
+      # elle donne 11x trop de vitesse (le robot explose) : il faudrait alors les
+      # valeurs mirror (RCY 0.1946...), environ 9 % sous l'entrainement.
       # Les commentaires WP/RWRR ci-dessous datent d'une echelle plus ancienne.
-      RCY:  0.19462447208111955
-      RCR:  0.31330676491966813
-      RCP:  0.2587348898824309
-      RKP:  0.6109481915933528
-      RAP:  0.26033531188170367
-      RAR:  0.31931538780853846
-      LCY:  0.19462447208111955
-      LCR:  0.31330676491966813
-      LCP:  0.2587348898824309
-      LKP:  0.6109481915933528
-      LAP:  0.26033531188170367
-      LAR:  0.31931538780853846
+      RCY:  2.140869192892315
+      RCR:  3.44637441411635
+      RCP:  2.8460837887067396
+      RKP:  6.72043010752688
+      RAP:  2.8636884306987405
+      RAR:  3.512469265893923
+      LCY:  2.140869192892315
+      LCR:  3.44637441411635
+      LCP:  2.8460837887067396
+      LKP:  6.72043010752688
+      LAP:  2.8636884306987405
+      LAR:  3.512469265893923
       # WP/RSP/LSP/RWRR/LWRR ne sont plus fixes par la saturation de
       # l'actionneur mais par un plafond de COURSE ajoute dans hrp5_constants.py
       # (0.4 s minimum pour traverser le plus court debattement depuis q0). WP
@@ -357,27 +359,27 @@ policies:
       # deg (alignement sur halfSitting de mc_hrp5_p), ce qui rapproche le joint
       # de sa butee et reduit sa course mini de 27 a 7 deg. C'est le joint le
       # plus serre de l'espace d'action desormais.
-      WP:   0.4379050621825189
-      WR:   0.6940331655315369
-      WY:   0.36040711587809593
-      HY:   0.11532783860253415
-      HP:   0.08531258531258533
-      RSC:  0.2780094523213789
-      RSP:  0.3342491760757811
-      RSR:  0.433254109724698
-      RSY:  0.303030303030303
-      REP:  0.808080808080808
-      RWRY: 0.4978592054167083
-      RWRR: 1.0293148880105403
-      RWRP: 0.41172595520421607
-      LSC:  0.2780094523213789
-      LSP:  0.3342491760757811
-      LSR:  0.433254109724698
-      LSY:  0.303030303030303
-      LEP:  0.808080808080808
-      LWRY: 0.4978592054167083
-      LWRR: 1.0293148880105403
-      LWRP: 0.41172595520421607
+      WP:   4.8169556840077075
+      WR:   7.634364820846906
+      WY:   3.964478274659055
+      HY:   1.2686062246278753
+      HP:   0.9384384384384384
+      RSC:  3.058103975535168
+      RSP:  3.676740936833592
+      RSR:  4.765795206971678
+      RSY:  3.333333333333334
+      REP:  8.888888888888888
+      RWRY: 5.476451259583791
+      RWRR: 11.322463768115943
+      RWRP: 4.528985507246377
+      LSC:  3.058103975535168
+      LSP:  3.676740936833592
+      LSR:  4.765795206971678
+      LSY:  3.333333333333334
+      LEP:  8.888888888888888
+      LWRY: 5.476451259583791
+      LWRR: 11.322463768115943
+      LWRP: 4.528985507246377
       # Hors ref_joint_order, jamais lu par currentActionScaled (boucle sur
       # actionToDofMap uniquement) -- 0 explicite par coherence.
       RHDY: 0.0
