@@ -83,6 +83,11 @@ policy_path: [
   # reference de vitesse, interpolation sur 2 pas de 1 ms) et un modele de
   # frottement articulaire. NOUVEAUX gains PD (HRP5P_PD_GAINS) et nouvelle
   # action_scale, voir plus bas ; physique a 1 ms, decimation 10.
+  # index 0 : push7 (run 2026-10-15_18-31-35), index 1 : angmom (run
+  # 2026-10-18_15-15-18). Meme famille (filtre PostureTask sans refVel,
+  # echelle x11, memes actionneurs et plages de commande), d'ou un seul bloc
+  # de reglages partage plus bas. Bascule depuis la GUI, policy desarmee.
+  "@RL_POLICY_INSTALL_PREFIX@/push7.onnx",
   "@RL_POLICY_INSTALL_PREFIX@/angmom.onnx",
 ]
 # Exige MainRobot: HRP5P dans mc_rtc.yaml (module mc_hrp5_p).
@@ -94,7 +99,8 @@ default_policy_index: 0
 #vel_cmd_replay: /home/leroyhi/exp_hrp5p/07_10/reel_velcmd.json
 
 policies:
-  # index 0 (seule entree) : HRP5P, velocity-action -- premiere integration,
+  # index 0 : HRP5P, velocity-action (push7 ; index 1 angmom = alias en fin
+  # de liste) -- premiere integration,
   # jamais testee (ni sim ni robot). Exige MainRobot: HRP5P (module
   # mc_hrp5_p, construit dans le superbuild avec WITH_HRP5 ON) sous peine de
   # std::out_of_range dans initializeRobot() (les maps kp/kd/q0/effort_limit
@@ -121,7 +127,8 @@ policies:
   # partage avec l'ancien `case 2:` RHPS1) et V3_DEEP_HISTORY_SIZE a 20 dans
   # NewRLQPController.h -- sans consequence sur RHPS1 puisque cette branche ne
   # le porte plus. NE PAS ARMER avant un premier test simulation.
-  - use_QP: true
+  - &hrp5p_push_family
+    use_QP: true
     obs_format: 8
     velocity_action: true
     # vel0qp : entrainee avec une reference de vitesse NULLE dans le PD bas
@@ -134,7 +141,7 @@ policies:
     # Integration de q_rl sous le QP : true = re-seede chaque pas sur la sortie du
     # QP, sans refVel -- exactement le posture_task_filter de l'entrainement
     # (posture_task_vel_feedforward: false, seed_lag 0), avec l'echelle x11 de ce
-    # run ci-dessous. En integrale libre + echelle /11, angmom oscille a ~5.4 Hz
+    # run (metadonnees de l'onnx). En integrale libre + echelle /11, angmom oscille a ~5.4 Hz
     # en roulis sous QP (sim du 2026-10-19), pas avec ce reglage.
     qp_reseed_integral: true
     use_torque_task: false
@@ -320,88 +327,16 @@ policies:
       LMPIP: 4
       LMDIP: 4
 
-    # HRP5P_ACTION_SCALE du run d'entrainement (mjlab hrp5_constants.py),
-    # pleine precision (memes valeurs e/(3*(kp*0.01+kd)) que la policy
-    # precedente pour jambes/taille -- inchangees -- mais bras/tete
-    # desormais *0.3 au lieu de *0.5, hrp5_constants.py:738, pour cette
-    # policy entrainee avec le delai d'actionneur randomise). Recoupe avec
-    # les metadonnees action_scale de policy/hrp5_collisions.onnx (arrondies a 3
-    # decimales) : les 33 entrees concordent.
-    action_scale: &hrp5p_action_scale
-      # angmom.onnx : echelle d'entrainement pleine precision (params/env.yaml du
-      # run 2026-10-18_15-15-18), x11 par rapport a hrp5_mirror/cop2. Elle compense le
-      # filtre PostureTask sans refVel de l'entrainement (vitesse realisee = 0.10 x
-      # commande) et ne s'emploie QU'AVEC qp_reseed_integral: true. En integrale libre
-      # elle donne 11x trop de vitesse (le robot explose) : il faudrait alors les
-      # valeurs mirror (RCY 0.1946...), environ 9 % sous l'entrainement.
-      # Les commentaires WP/RWRR ci-dessous datent d'une echelle plus ancienne.
-      RCY:  2.140869192892315
-      RCR:  3.44637441411635
-      RCP:  2.8460837887067396
-      RKP:  6.72043010752688
-      RAP:  2.8636884306987405
-      RAR:  3.512469265893923
-      LCY:  2.140869192892315
-      LCR:  3.44637441411635
-      LCP:  2.8460837887067396
-      LKP:  6.72043010752688
-      LAP:  2.8636884306987405
-      LAR:  3.512469265893923
-      # WP/RSP/LSP/RWRR/LWRR ne sont plus fixes par la saturation de
-      # l'actionneur mais par un plafond de COURSE ajoute dans hrp5_constants.py
-      # (0.4 s minimum pour traverser le plus court debattement depuis q0). WP
-      # passe de 1.875 a 0.5236 : avec l'ancienne valeur, une action de 1
-      # epuisait ses 12 deg de course arriere en 11 pas de policy (0.112 s), et
-      # la policy s'installait en butee -- son action moyenne y etait de -1.9,
-      # contre -0.3 au maximum ailleurs.
-      #
-      # RWRR/LWRR tombent a 0.3054 pour une autre raison : q0 est passe a +-40
-      # deg (alignement sur halfSitting de mc_hrp5_p), ce qui rapproche le joint
-      # de sa butee et reduit sa course mini de 27 a 7 deg. C'est le joint le
-      # plus serre de l'espace d'action desormais.
-      WP:   4.8169556840077075
-      WR:   7.634364820846906
-      WY:   3.964478274659055
-      HY:   1.2686062246278753
-      HP:   0.9384384384384384
-      RSC:  3.058103975535168
-      RSP:  3.676740936833592
-      RSR:  4.765795206971678
-      RSY:  3.333333333333334
-      REP:  8.888888888888888
-      RWRY: 5.476451259583791
-      RWRR: 11.322463768115943
-      RWRP: 4.528985507246377
-      LSC:  3.058103975535168
-      LSP:  3.676740936833592
-      LSR:  4.765795206971678
-      LSY:  3.333333333333334
-      LEP:  8.888888888888888
-      LWRY: 5.476451259583791
-      LWRR: 11.322463768115943
-      LWRP: 4.528985507246377
-      # Hors ref_joint_order, jamais lu par currentActionScaled (boucle sur
-      # actionToDofMap uniquement) -- 0 explicite par coherence.
-      RHDY: 0.0
-      LHDY: 0.0
-      RTMP:  0.0
-      RTPIP: 0.0
-      RTDIP: 0.0
-      RIMP:  0.0
-      RIPIP: 0.0
-      RIDIP: 0.0
-      RMMP:  0.0
-      RMPIP: 0.0
-      RMDIP: 0.0
-      LTMP:  0.0
-      LTPIP: 0.0
-      LTDIP: 0.0
-      LIMP:  0.0
-      LIPIP: 0.0
-      LIDIP: 0.0
-      LMMP:  0.0
-      LMPIP: 0.0
-      LMDIP: 0.0
+    # action_scale et q0 : PLUS ICI, lus dans les metadonnees de l'onnx a
+    # l'initialisation (applyOnnxMetadata() : action_scale sur ref_joint_order,
+    # q0 = default_joint_pos sur les 35 joints actionnes, observation_names et
+    # ref_joint_order verifies). Arrondis a 3 decimales par l'exporteur
+    # (<= 5e-4 rad sur q0, < 0.1 % sur action_scale). use_onnx_metadata: false
+    # pour revenir a des blocs action_scale / q0 ecrits ici a la main.
+    # angmom (comme vel0qp/push*) porte l'echelle x11 de son entrainement : a
+    # n'utiliser qu'avec qp_reseed_integral: true (le robot explose sinon).
+    # kp/kd restent ci-dessous : joint_stiffness / joint_damping de l'onnx sont
+    # des valeurs factices de l'exporteur (1.000 / -0.000).
 
     # HRP5P_PD_GAINS (mjlab hrp5_constants.py), reprises telles quelles de
     # hrp5p_mj_description/pdgains/PDgains_sim.dat -- gains PD REELS du robot,
@@ -521,70 +456,6 @@ policies:
       LMPIP: 6.93
       LMDIP: 6.93
 
-    # HRP5P_INIT_STATE (mjlab hrp5_constants.py) = default_joint_pos de
-    # policy/hrp5_collisions.onnx (metadata, arrondi a 3 decimales -- concorde, verifie
-    # par tools/sync_policy_yaml.py). PAS recopie de RHPS1 : q0 definit
-    # l'observation (jointPos_ = q_mesure - q_zero), une erreur ici est un biais
-    # constant sur l'entree du reseau, pas juste un decalage de posture.
-    #
-    # RWRR/LWRR sont passes de +-20 a +-40 deg : HRP5P_INIT_STATE est desormais
-    # aligne sur le halfSitting de mc_hrp5_p, qui etait le seul endroit ou les
-    # deux differaient. Effet de bord : ces deux joints se retrouvent a 7 deg de
-    # leur butee, d'ou leur action_scale rabotee plus haut.
-    q0:
-      RCY:  0.0
-      RCR:  0.0
-      RCP:  -0.468970    # -26.87 deg
-      RKP:  0.872665     # 50 deg
-      RAP:  -0.403695    # -23.13 deg
-      RAR:  0.0
-      LCY:  0.0
-      LCR:  0.0
-      LCP:  -0.468970
-      LKP:  0.872665
-      LAP:  -0.403695
-      LAR:  0.0
-      WP:   0.0
-      WR:   0.0
-      WY:   0.0
-      HY:   0.0
-      HP:   0.0
-      RSC:  0.0
-      RSP:  1.047198    # 60 deg
-      RSR:  -0.349066   # -20 deg
-      RSY:  -0.087266   # -5 deg
-      REP:  -1.832596   # -105 deg
-      RWRY: 0.0
-      RWRR: -0.698132   # -40 deg
-      RWRP: 0.0
-      LSC:  0.0
-      LSP:  1.047198
-      LSR:  0.349066    # 20 deg
-      LSY:  0.087266    # 5 deg
-      LEP:  -1.832596
-      LWRY: 0.0
-      LWRR: 0.698132    # 40 deg
-      LWRP: 0.0
-      # halfSitting de mc_hrp5_p.cpp (pose de repos du module, PAS
-      # l'entrainement -- ces joints n'en ont pas) : la PostureTask les y
-      # tient en permanence puisqu'ils ne sont jamais ecrits par la RL.
-      #
-      # SEULEMENT RHDY/LHDY ici, PAS les 18 articulations des doigts (RTMP,
-      # RIMP, ... ) : contrairement a kp/kd/effort_limit (.at() par nom,
-      # tolerent aux cles en trop), configRL() exige
-      # q0.keys().size() == nbActuatedJoints EXACTEMENT
-      # (NewRLQPController.cpp:1481-1485). robot().refJointOrder() filtre a
-      # 35 (confirme au chargement, log "35 actuated joints retained out of
-      # 53") : les 18 doigts ont dof() != 1 ou !hasJoint() (mimic joints /
-      # geres via les Grippers l_gripper=LTMP, r_gripper=RTMP dans
-      # mc_hrp5_p.cpp) et ne comptent donc pas dans les 35. Les avoir dans
-      # kp/kd/effort_limit/action_scale/vel_target_limit_per_joint ne pose
-      # aucun probleme (ces maps ne verifient que la presence de chaque cle
-      # utilisee, pas la taille totale) -- laisses tels quels par coherence
-      # avec le reste du fichier.
-      RHDY: 0.0
-      LHDY: 0.0
-
     # Ordre ATTENDU PAR LE RESEAU, confirme directement dans les metadonnees
     # de policy/hrp5_collisions.onnx (joint_names, action_scale -- 33 entrees). NE PAS
     # utiliser l'ordre de HRP5P_ACTUATORS dans hrp5_constants.py : ce tuple
@@ -625,6 +496,10 @@ policies:
       - LWRR
       - LWRP
 
+  # index 1 : angmom -- memes reglages que push7 (index 0). action_scale et q0
+  # viennent de chaque onnx. Pour regler angmom a part, remplacer l'alias par
+  # un bloc complet.
+  - *hrp5p_push_family
 
 use_async_inference: false
 log_timing: true

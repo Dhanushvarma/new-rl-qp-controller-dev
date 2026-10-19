@@ -604,10 +604,12 @@ struct NewRLQPController_DLLAPI NewRLQPController : public mc_control::fsm::Cont
    *  QP), from qpReseedIntegral_ / zeroVelRef_ / postureRefVel_. Used by
    *  utils.cpp and logged as NewRLQPController_reseedQRl. */
   bool reseedQRl() const;
-  /** Compares action_scale with the action_scale metadata of the current
-   *  policy's onnx (ref_joint_order), and throws on a mismatch unless the
-   *  policy block sets allow_action_scale_mismatch: true. */
-  void checkActionScaleAgainstOnnx();
+  /** Writes action_scale (over ref_joint_order) and q0 (actuated joints) from
+   *  the current policy's onnx metadata into its policy block, and checks
+   *  observation_names and ref_joint_order against it. Off with
+   *  use_onnx_metadata: false. kp/kd stay in the yaml: the exported
+   *  joint_stiffness / joint_damping are placeholders. */
+  void applyOnnxMetadata();
 
   // Joystick loss latch, see updateVelocityCommand(). mc_joystick_plugin's
   // Joystick::connected only means "its fd was opened once": after an unplug

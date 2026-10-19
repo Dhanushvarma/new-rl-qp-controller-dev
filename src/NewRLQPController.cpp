@@ -352,6 +352,7 @@ void NewRLQPController::initializeRobot()
 {
   useQP_    = config_("policies")[currentPolicyIndex]("use_QP", true);
   velocityAction_ = config_("policies")[currentPolicyIndex]("velocity_action", false);
+  applyOnnxMetadata();
   obsFormat_      = size_t(int(config_("policies")[currentPolicyIndex]("obs_format", int(currentPolicyIndex))));
   robotName_ = robot().name();
   jointNames = robot().refJointOrder();
@@ -538,7 +539,6 @@ void NewRLQPController::initializeRobot()
   {
     mc_rtc::log::info("[NewRLQPController] posture_ref_vel false: PostureTask refVel held at 0");
   }
-  checkActionScaleAgainstOnnx();
 
 
   // Velocity damper, off unless the policy declares velocity_damper_di.
@@ -1278,68 +1278,131 @@ bool NewRLQPController::reseedQRl() const
   return useQP_ && !posturePassthrough_ && actuationDelaySteps_ == 0 && reseed;
 }
 
-void NewRLQPController::checkActionScaleAgainstOnnx()
+void NewRLQPController::applyOnnxMetadata()
 {
-  const auto & pol = config_("policies")[currentPolicyIndex];
+  // Runs before initializeRobot() reads action_scale and q0 (and configRL()
+  // reads q0 again), so writing them into the policy block is enough. The
+  // metadata is rounded to 3 decimals: <= 5e-4 rad on q0, < 0.1 % on
+  // action_scale.
+  auto pol = config_("policies")[currentPolicyIndex];
   const std::vector<std::string> paths = config_("policy_path", std::vector<std::string>{});
-  const std::vector<std::string> order = pol("ref_joint_order", std::vector<std::string>{});
-  if(currentPolicyIndex >= paths.size() || order.empty()) { return; }
+  if(!pol("use_onnx_metadata", true) || currentPolicyIndex >= paths.size())
+  {
+    mc_rtc::log::warning("[NewRLQPController] use_onnx_metadata false: action_scale and q0 taken from the yaml");
+    return;
+  }
   const std::string & path = paths[currentPolicyIndex];
-  std::vector<double> meta;
+  std::map<std::string, std::string> meta;
   try
   {
-    Ort::Env env(ORT_LOGGING_LEVEL_ERROR, "action_scale_check");
+    Ort::Env env(ORT_LOGGING_LEVEL_ERROR, "onnx_metadata");
     Ort::SessionOptions opts;
     Ort::Session session(env, path.c_str(), opts);
     Ort::AllocatorWithDefaultOptions alloc;
-    auto value = session.GetModelMetadata().LookupCustomMetadataMapAllocated("action_scale", alloc);
-    if(!value)
+    auto md = session.GetModelMetadata();
+    for(const char * key : {"run_path", "joint_names", "default_joint_pos", "action_scale", "observation_names"})
     {
-      mc_rtc::log::warning("[NewRLQPController] {} has no action_scale metadata, action_scale not checked", path);
-      return;
+      if(auto value = md.LookupCustomMetadataMapAllocated(key, alloc)) { meta[key] = value.get(); }
     }
-    std::stringstream ss(value.get());
-    std::string tok;
-    while(std::getline(ss, tok, ',')) { meta.push_back(std::stod(tok)); }
   }
   catch(const std::exception & e)
   {
-    mc_rtc::log::warning("[NewRLQPController] action_scale check skipped ({}): {}", path, e.what());
-    return;
+    mc_rtc::log::error_and_throw<std::runtime_error>("[NewRLQPController] cannot read the metadata of {}: {}", path,
+                                                     e.what());
   }
-  if(meta.size() != order.size())
+  auto split = [](const std::string & s)
   {
-    mc_rtc::log::warning("[NewRLQPController] {}: {} action_scale metadata entries for {} joints, not checked", path,
-                         meta.size(), order.size());
-    return;
+    std::vector<std::string> out;
+    std::stringstream ss(s);
+    std::string tok;
+    while(std::getline(ss, tok, ',')) { out.push_back(tok); }
+    return out;
+  };
+  auto numbers = [&](const std::string & key)
+  {
+    std::vector<double> out;
+    for(const auto & tok : split(meta[key])) { out.push_back(std::stod(tok)); }
+    return out;
+  };
+  for(const char * key : {"joint_names", "default_joint_pos", "action_scale", "observation_names"})
+  {
+    if(!meta.count(key))
+      mc_rtc::log::error_and_throw<std::runtime_error>(
+          "[NewRLQPController] {} has no {} metadata -- set use_onnx_metadata: false and give action_scale / q0 in "
+          "the yaml",
+          path, key);
   }
-  std::string mismatches;
-  size_t n = 0;
-  for(size_t k = 0; k < order.size(); ++k)
+
+  // utils.cpp builds obs_format 8 with exactly these terms, in this order.
+  const std::vector<std::string> obsNames = split(meta["observation_names"]);
+  const int obsFormat = pol("obs_format", int(currentPolicyIndex));
+  const std::vector<std::string> expected = {"base_lin_vel", "base_ang_vel", "projected_gravity", "joint_pos",
+                                             "joint_vel",    "actions",      "command"};
+  if(obsFormat == 8 && obsNames != expected)
+    mc_rtc::log::error_and_throw<std::runtime_error>(
+        "[NewRLQPController] {}: observation_names [{}] do not match obs_format 8 [{}]", path,
+        mc_rtc::io::to_string(obsNames), mc_rtc::io::to_string(expected));
+
+  // The onnx does not name the action joints: ref_joint_order (yaml) has to be
+  // the subsequence of joint_names that action_scale was exported over.
+  const std::vector<std::string> names = split(meta["joint_names"]);
+  const std::vector<double> q0 = numbers("default_joint_pos");
+  const std::vector<double> scale = numbers("action_scale");
+  const std::vector<std::string> order = pol("ref_joint_order", std::vector<std::string>{});
+  if(q0.size() != names.size())
+    mc_rtc::log::error_and_throw<std::runtime_error>("[NewRLQPController] {}: {} default_joint_pos for {} joint_names",
+                                                     path, q0.size(), names.size());
+  size_t next = 0;
+  for(const auto & j : order)
   {
-    const auto it = std::find(jointNames.begin(), jointNames.end(), order[k]);
-    if(it == jointNames.end()) { continue; }
-    const double cfg = actionScale(static_cast<int>(it - jointNames.begin()));
-    // The metadata is rounded to 3 decimals.
-    if(std::abs(cfg - meta[k]) > 6e-4 + 1e-3 * std::abs(meta[k]))
+    while(next < names.size() && names[next] != j) { ++next; }
+    if(next++ >= names.size())
+      mc_rtc::log::error_and_throw<std::runtime_error>(
+          "[NewRLQPController] {}: ref_joint_order is not a subsequence of the onnx joint_names (at {})", path, j);
+  }
+  if(scale.size() != order.size())
+    mc_rtc::log::error_and_throw<std::runtime_error>(
+        "[NewRLQPController] {}: {} action_scale entries for {} joints in ref_joint_order", path, scale.size(),
+        order.size());
+
+  std::map<std::string, double> scaleMap, q0Map;
+  for(size_t k = 0; k < order.size(); ++k) { scaleMap[order[k]] = scale[k]; }
+  // Same filter as jointNames in initializeRobot(): configRL() wants exactly
+  // one q0 entry per actuated joint.
+  for(const auto & j : robot().refJointOrder())
+  {
+    if(!robot().hasJoint(j) || robot().mb().joint(robot().jointIndexByName(j)).dof() != 1) { continue; }
+    const auto it = std::find(names.begin(), names.end(), j);
+    if(it == names.end())
+      mc_rtc::log::error_and_throw<std::runtime_error>("[NewRLQPController] {}: no default_joint_pos for {}", path, j);
+    q0Map[j] = q0[static_cast<size_t>(it - names.begin())];
+  }
+
+  auto replace = [&](const std::string & key, const std::map<std::string, double> & values)
+  {
+    std::string diff;
+    size_t n = 0;
+    if(pol.has(key))
     {
-      if(n++ < 6) { mismatches += fmt::format(" {} {:.4f} (onnx {:.3f})", order[k], cfg, meta[k]); }
+      const std::map<std::string, double> yaml = pol(key);
+      for(const auto & [j, v] : values)
+      {
+        const auto it = yaml.find(j);
+        if(it == yaml.end() || std::abs(it->second - v) <= 6e-4 + 1e-3 * std::abs(v)) { continue; }
+        if(n++ < 6) { diff += fmt::format(" {} {:.4f} -> {:.3f}", j, it->second, v); }
+      }
     }
-  }
-  if(n == 0)
-  {
-    mc_rtc::log::success("[NewRLQPController] action_scale matches the onnx metadata ({} joints)", order.size());
-    return;
-  }
-  const std::string msg = fmt::format("[NewRLQPController] action_scale differs from the onnx metadata on {} joints:{}{}",
-                                      n, mismatches, n > 6 ? " ..." : "");
-  if(pol("allow_action_scale_mismatch", false))
-  {
-    mc_rtc::log::warning("{} (allowed by allow_action_scale_mismatch)", msg);
-    return;
-  }
-  mc_rtc::log::error_and_throw<std::runtime_error>(
-      "{} -- fix action_scale, or set allow_action_scale_mismatch: true in the policy block", msg);
+    if(n > 0)
+      mc_rtc::log::warning("[NewRLQPController] yaml {} replaced by the onnx one, {} joints differ:{}{}", key, n,
+                           diff, n > 6 ? " ..." : "");
+    auto c = pol.add(key);
+    for(const auto & [j, v] : values) { c.add(j, v); }
+  };
+  replace("action_scale", scaleMap);
+  replace("q0", q0Map);
+  mc_rtc::log::success("[NewRLQPController] {} (run {}): action_scale ({}) and q0 ({}) from the onnx metadata, "
+                       "observation_names checked; kp/kd from the yaml",
+                       path, meta.count("run_path") ? meta["run_path"] : "?", scaleMap.size(), q0Map.size());
 }
 
 void NewRLQPController::applyVelCmdReplay()
