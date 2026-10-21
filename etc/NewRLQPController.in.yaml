@@ -89,6 +89,10 @@ policy_path: [
   # de reglages partage plus bas. Bascule depuis la GUI, policy desarmee.
   "@RL_POLICY_INSTALL_PREFIX@/push7.onnx",
   "@RL_POLICY_INSTALL_PREFIX@/angmom.onnx",
+  # index 2 : push11 (run 2026-10-21_12-15-08), meme famille et meme
+  # action_scale que push7 (metadonnees de l'onnx et bloc actions du env.yaml
+  # identiques), meme chaine iob / PostureTask a l'entrainement.
+  "@RL_POLICY_INSTALL_PREFIX@/push11.onnx",
 ]
 # Exige MainRobot: HRP5P dans mc_rtc.yaml (module mc_hrp5_p).
 default_policy_index: 0
@@ -499,6 +503,8 @@ policies:
   # index 1 : angmom -- memes reglages que push7 (index 0). action_scale et q0
   # viennent de chaque onnx. Pour regler angmom a part, remplacer l'alias par
   # un bloc complet.
+  - *hrp5p_push_family
+  # index 2 : push11 -- memes reglages que push7 (index 0).
   - *hrp5p_push_family
 
 use_async_inference: false
