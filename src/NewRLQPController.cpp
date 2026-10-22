@@ -4,6 +4,7 @@
 #include <cmath>
 #include <map>
 #include <filesystem>
+#include <fstream>
 #include <sstream>
 
 #include <mc_rtc/io_utils.h>
@@ -157,6 +158,7 @@ bool NewRLQPController::run()
   // Must run before anything that could trigger a solve this tick -- see
   // restoreQPVelocity()'s own comment for why the ordering matters.
   if(useQP_ && qpZeroVelOut_) { restoreQPVelocity(); }
+  if(simServoGainsPending_) { applySimServoGains(); }
 
   // Motion loads finished in the background, GUI refresh (tracking slots)
   tracker_.update();
@@ -340,6 +342,8 @@ void NewRLQPController::reset(const mc_control::ControllerResetData & reset_data
   // put the robot back in the held state and require a deliberate re-arm.
   policyArmed_ = false;
   tracker_.stop();
+  simServoGainsFile_ = config_("sim_servo_gains", std::string(""));
+  simServoGainsPending_ = !simServoGainsFile_.empty();
 
   checkFloatingBaseObserver();
 
@@ -1585,6 +1589,57 @@ bool NewRLQPController::isSimulated() const
   // See the doc comment on the declaration (NewRLQPController.h) for why this
   // check exists and why it is not cached.
   return datastore().has(robot().name() + "::SetPosW");
+}
+
+void NewRLQPController::applySimServoGains()
+{
+  simServoGainsPending_ = false;
+  const std::string call = robot().name() + "::SetPDGains";
+  if(!datastore().has(call))
+  {
+    mc_rtc::log::warning("[NewRLQPController] sim_servo_gains ignored: no simulator PD ({} missing)", call);
+    return;
+  }
+  std::ifstream file(simServoGainsFile_);
+  if(!file)
+  {
+    mc_rtc::log::error("[NewRLQPController] sim_servo_gains: cannot open {}", simServoGainsFile_);
+    return;
+  }
+  // mc_mujoco's format (MjRobot::loadGain): blank lines and '#' comments skipped.
+  std::vector<double> kp, kd;
+  std::string line;
+  while(std::getline(file, line))
+  {
+    if(line.empty() || line[0] == '#') continue;
+    std::istringstream row(line);
+    double p = 0.0, d = 0.0;
+    if(row >> p >> d)
+    {
+      kp.push_back(p);
+      kd.push_back(d);
+    }
+  }
+  const size_t n = robot().module().ref_joint_order().size();
+  if(kp.size() != n)
+  {
+    mc_rtc::log::error("[NewRLQPController] sim_servo_gains: {} rows in {}, ref_joint_order has {}", kp.size(),
+                       simServoGainsFile_, n);
+    return;
+  }
+  try
+  {
+    if(datastore().call<bool, const std::vector<double> &, const std::vector<double> &>(call, kp, kd))
+    {
+      mc_rtc::log::success("[NewRLQPController] simulator servo gains from {}", simServoGainsFile_);
+      return;
+    }
+    mc_rtc::log::error("[NewRLQPController] sim_servo_gains: {} refused the gains", call);
+  }
+  catch(const std::exception & e)
+  {
+    mc_rtc::log::error("[NewRLQPController] sim_servo_gains: {} failed: {}", call, e.what());
+  }
 }
 
 void NewRLQPController::addLog()

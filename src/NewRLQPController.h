@@ -814,6 +814,15 @@ private:
    *  within a tick, so it needs a HOLD first. */
   bool refusedWhileArmed(const std::string & what) const;
 
+  /** @brief Simulation only: give the simulator's joint PD (mc_mujoco) the
+   *  gains of config key sim_servo_gains, a file in mc_mujoco's PD gains format
+   *  (one "kp kd" row per ref_joint_order joint), e.g. the real robot's servo
+   *  gains so a simulated run tracks with the robot's servos. A no-op (logged)
+   *  without the simulator's <robot>::SetPDGains call. Applied on the first tick
+   *  after each reset, since mc_mujoco puts its own gains back when it resets. */
+  void applySimServoGains();
+  std::string simServoGainsFile_;
+  bool simServoGainsPending_ = false;
 
   /** @brief Abort if no floating-base observer made it into the pipeline. */
   void checkFloatingBaseObserver();

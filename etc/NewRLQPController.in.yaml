@@ -756,3 +756,9 @@ impact_force_threshold: 30.0
 # impact_force_hysteresis_ratio: falling-edge threshold = ratio * impact_force_threshold,
 # so sensor noise straddling the threshold mid-stance does not retrigger the impact.
 impact_force_hysteresis_ratio: 0.5
+# Simulation only: a file in mc_mujoco's PD gains format (one "kp kd" row per
+# ref_joint_order joint) that the controller gives mc_mujoco's joint PD on the
+# first tick after each reset, e.g. the real robot's servo gains, kept outside
+# the repository. Empty: mc_mujoco's own gains. Ignored on the robot (no
+# simulator PD to set).
+sim_servo_gains: ""
