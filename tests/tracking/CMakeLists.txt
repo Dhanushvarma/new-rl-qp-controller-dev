@@ -11,3 +11,11 @@ set(TRACKING_IMU_SITE_POS "-0.09;0.0;0.125" CACHE STRING "IMU site position in t
 if(TRACKING_GOLDEN_CSV)
   add_test(NAME tracking_observation COMMAND test_tracking_observation ${TRACKING_GOLDEN_CSV} ${TRACKING_IMU_SITE_POS})
 endif()
+
+# The policy run by RLPolicyInterface on the golden observations, against the golden actions
+add_executable(test_tracking_policy test_tracking_policy.cpp)
+target_link_libraries(test_tracking_policy PRIVATE ${PROJECT_NAME})
+set(TRACKING_POLICY_ONNX "${PROJECT_SOURCE_DIR}/policy/tracking/P6_final/policy.onnx" CACHE STRING "Policy of the golden CSV")
+if(TRACKING_GOLDEN_CSV)
+  add_test(NAME tracking_policy COMMAND test_tracking_policy ${TRACKING_GOLDEN_CSV} ${TRACKING_POLICY_ONNX})
+endif()

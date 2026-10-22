@@ -93,8 +93,12 @@ policy_path: [
   # action_scale que push7 (metadonnees de l'onnx et bloc actions du env.yaml
   # identiques), meme chaine iob / PostureTask a l'entrainement.
   "@RL_POLICY_INSTALL_PREFIX@/push11.onnx",
+  # index 3: P6 final, whole-body motion tracking (see its slot below).
+  "@RL_POLICY_INSTALL_PREFIX@/tracking/P6_final/policy.onnx",
 ]
 # Exige MainRobot: HRP5P dans mc_rtc.yaml (module mc_hrp5_p).
+# 3 = the motion tracking slot (P6 final): select it from the GUI while
+# disarmed, or set it here.
 default_policy_index: 0
 
 # Replay en boucle fermee (SIMULATION SEULEMENT, refuse sous RobotHardware) :
@@ -506,6 +510,208 @@ policies:
   - *hrp5p_push_family
   # index 2 : push11 -- memes reglages que push7 (index 0).
   - *hrp5p_push_family
+
+  # index 3: P6 final, whole-body motion tracking (mjlab BeyondMimic-style).
+  # Checkpoint mjlab_link_tracking hrp5p_tracking
+  # 2026-10-18_00-47-42_P6_rlpos_stanceslip_ft_from_B12/model_16999.pt, task
+  # Mjlab-Tracking-Flat-HRP5P-RLPos-MultiMotion-WristOri-PathCutoff-JointPos-
+  # SwingHeight-JointVel-LegJointPos-FootOri-ActionFilter-StanceSlip; trained
+  # through the lab controller's position mode, not this posture chain.
+  # MotionTracker (src/MotionTracker.h) runs it: ARM ramps (min-jerk) from the
+  # held posture to the selected motion's first frame, settles, then tracks
+  # from frame 0; HOLD freezes the posture target at the last command.
+  # Observation obs_format 9 (220 = 106 reference joint angles/velocities + 3
+  # + 6 anchor + 3 IMU-site linear velocity + 3 gyro + 33 + 33 + 33 raw previous
+  # action). Action: q0 + action_scale * action over ref_joint_order, low-pass
+  # filtered at action_filter_cutoff_hz once per policy step (mjlab's
+  # FilteredJointPositionAction, seeded with the measured joint angles), clamped
+  # to the joint range, to the PostureTask (K posture_stiffness, damping 2
+  # sqrt(K), no refVel). 20 ms policy step: 10 ticks at 2 ms, 4 at 5 ms.
+  - use_QP: true
+    obs_format: 9
+    velocity_action: false
+    # action_scale and q0 below at full precision (the onnx metadata path rounds
+    # to 3 decimals; this onnx has no default_joint_pos / action_scale entries).
+    use_onnx_metadata: false
+    policy_step_size: 0.02
+    physics_step_size: 0.001
+    pd_gains_ratio: 1.0
+    posture_stiffness: 1600
+    posture_ref_vel: false
+    # Position only to the joint servos (the real servo takes no velocity
+    # reference; mc_mujoco's PD otherwise gets the QP's velocity).
+    qp_zero_vel_out: true
+    # Auto-HOLD above this measured joint speed (rad/s); see
+    # NewRLQPController_maxJointVel in the logs.
+    runaway_disarm_vel: 6.0
+    tracking:
+      # Motion selected at load (a CSV of the motions directory, one row per
+      # 20 ms frame); the GUI selects another one while disarmed.
+      motion: motion_bwc_v2_seed010.csv
+      # Default: the installed share/NewRLQPController/motions. Set it to the
+      # source folder (<repo>/motions) to use new CSVs without reinstalling.
+      # motions_dir: /path/to/new-rl-qp-controller/motions
+      kind: whole_body
+      anchor_body: Chest_Link2
+      base_body: Body
+      imu_sensor: Accelerometer
+      imu_site_pos: [-0.09, 0.0, 0.125]
+      action_filter_cutoff_hz: 4.0
+      observations: [command, motion_anchor_pos_b, motion_anchor_ori_b, base_lin_vel, base_ang_vel, joint_pos,
+                     joint_vel, actions]
+      # ARM: min-jerk ramp to the first frame at this mean joint speed (rad/s,
+      # at least 1 s), then a hold of arm_settle_time (s) before frame 0.
+      arm_ramp_speed: 0.1
+      arm_settle_time: 2.0
+      # Simulation only (refused on the robot): observe the simulator's base.
+      use_ground_truth_base: false
+    # From the P6 package's policy.yaml (export_deploy.py). q0: the 35 actuated
+    # joints (RHDY/LHDY are held at 0); kp/kd only feed logs and the QP bypass
+    # here, the PostureTask drives the robot.
+    action_scale:
+      RCY: 0.14433560316148783
+      RCR: 0.1202818744468866
+      RCP: 0.1202818744468866
+      RKP: 0.07654237312133735
+      RAP: 0.11909193758768251
+      RAR: 0.14290513704433522
+      LCY: 0.14433560316148783
+      LCR: 0.1202818744468866
+      LCP: 0.1202818744468866
+      LKP: 0.07654237312133735
+      LAP: 0.11909193758768251
+      LAR: 0.14290513704433522
+      WP: 0.07654237312133735
+      WR: 0.07654237312133735
+      WY: 0.1202818744468866
+      HY: 0.12846928938902866
+      HP: 0.12720224188068402
+      RSC: 0.5
+      RSP: 0.5
+      RSR: 0.5
+      RSY: 0.5
+      REP: 0.5
+      RWRY: 0.5
+      RWRR: 0.5
+      RWRP: 0.5
+      LSC: 0.5
+      LSP: 0.5
+      LSR: 0.5
+      LSY: 0.5
+      LEP: 0.5
+      LWRY: 0.5
+      LWRR: 0.5
+      LWRP: 0.5
+    q0:
+      RCY: 0.0
+      RCR: 0.0
+      RCP: -0.46896997001087637
+      RKP: 0.8726646259971648
+      RAP: -0.4036946559862884
+      RAR: 0.0
+      LCY: 0.0
+      LCR: 0.0
+      LCP: -0.46896997001087637
+      LKP: 0.8726646259971648
+      LAP: -0.4036946559862884
+      LAR: 0.0
+      WP: 0.0
+      WR: 0.0
+      WY: 0.0
+      HY: 0.0
+      HP: 0.0
+      RSC: 0.0
+      RSP: 1.0471975511965976
+      RSR: -0.3490658503988659
+      RSY: -0.08726646259971647
+      REP: -1.8325957145940461
+      RWRY: 0.0
+      RWRR: -0.6981317007977318
+      RWRP: 0.0
+      LSC: 0.0
+      LSP: 1.0471975511965976
+      LSR: 0.3490658503988659
+      LSY: 0.08726646259971647
+      LEP: -1.8325957145940461
+      LWRY: 0.0
+      LWRR: 0.6981317007977318
+      LWRP: 0.0
+      RHDY: 0.0
+      LHDY: 0.0
+    kp:
+      RCY: 434.5975533827075
+      RCR: 1251.5950611201729
+      RCP: 1251.5950611201729
+      RKP: 4636.087549081727
+      RAP: 638.3656319641831
+      RAR: 443.3416552432565
+      LCY: 434.5975533827075
+      LCR: 1251.5950611201729
+      LCP: 1251.5950611201729
+      LKP: 4636.087549081727
+      LAP: 638.3656319641831
+      LAR: 443.3416552432565
+      WP: 3090.7250327211514
+      WR: 3090.7250327211514
+      WY: 625.7975305600864
+      HY: 93.55821968940118
+      HP: 95.43134869734833
+      RSC: 434.5975533827075
+      RSP: 1545.3625163605757
+      RSR: 1094.7391016029062
+      RSY: 434.5975533827075
+      REP: 1283.8196349854516
+      RWRY: 650.2095379437669
+      RWRR: 650.2095379437669
+      RWRP: 663.2787496564366
+      LSC: 434.5975533827075
+      LSP: 1545.3625163605757
+      LSR: 1094.7391016029062
+      LSY: 434.5975533827075
+      LEP: 1283.8196349854516
+      LWRY: 650.2095379437669
+      LWRR: 650.2095379437669
+      LWRP: 663.2787496564366
+      RHDY: 10.0
+      LHDY: 10.0
+    kd:
+      RCY: 27.6673395506007
+      RCR: 79.67901629067134
+      RCP: 79.67901629067134
+      RKP: 295.1425000172587
+      RAP: 40.63961833083255
+      RAR: 28.224006364202868
+      LCY: 27.6673395506007
+      LCR: 79.67901629067134
+      LCP: 79.67901629067134
+      LKP: 295.1425000172587
+      LAP: 40.63961833083255
+      LAR: 28.224006364202868
+      WP: 196.76166667817247
+      WR: 196.76166667817247
+      WY: 39.83950814533567
+      HY: 5.956101252178275
+      HP: 6.075348348443717
+      RSC: 27.6673395506007
+      RSP: 98.38083333908624
+      RSR: 69.69325576643327
+      RSY: 27.6673395506007
+      REP: 81.73049637854696
+      RWRY: 41.39362480369912
+      RWRR: 41.39362480369912
+      RWRP: 42.225636662253464
+      LSC: 27.6673395506007
+      LSP: 98.38083333908624
+      LSR: 69.69325576643327
+      LSY: 27.6673395506007
+      LEP: 81.73049637854696
+      LWRY: 41.39362480369912
+      LWRR: 41.39362480369912
+      LWRP: 42.225636662253464
+      RHDY: 2.0
+      LHDY: 2.0
+    ref_joint_order: [RCY, RCR, RCP, RKP, RAP, RAR, LCY, LCR, LCP, LKP, LAP, LAR, WP, WR, WY, HY, HP, RSC, RSP, RSR,
+                      RSY, REP, RWRY, RWRR, RWRP, LSC, LSP, LSR, LSY, LEP, LWRY, LWRR, LWRP]
 
 use_async_inference: false
 log_timing: true

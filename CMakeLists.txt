@@ -35,12 +35,12 @@ if(BUILD_TESTING)
 endif()
 
 # Bundled policies, installed so the configured yaml can reference them with
-# a machine-independent path.
+# a machine-independent path. The whole policy/ tree (e.g.
+# policy/tracking/P6_final/policy.onnx), read when the install runs, so a newly
+# added policy is never left out of the install tree.
 set(RL_POLICY_INSTALL_PREFIX "${CMAKE_INSTALL_PREFIX}/share/${PROJECT_NAME}/policy")
-# CONFIGURE_DEPENDS: without it the glob is evaluated once, at configure time,
-# and a newly added policy is silently left out of the install tree.
-file(GLOB RL_POLICY_FILES CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/policy/*.onnx")
-install(FILES ${RL_POLICY_FILES} DESTINATION "${RL_POLICY_INSTALL_PREFIX}")
+install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/policy/" DESTINATION "${RL_POLICY_INSTALL_PREFIX}"
+        FILES_MATCHING PATTERN "*.onnx")
 
 # Read when the install runs: a motion added to motions/ needs no reconfigure.
 install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/motions/" DESTINATION "${RL_MOTIONS_INSTALL_PREFIX}"
