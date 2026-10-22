@@ -558,9 +558,11 @@ policies:
     pd_gains_ratio: 1.0
     posture_stiffness: 1600
     posture_ref_vel: false
-    # Position only to the joint servos (the real servo takes no velocity
-    # reference; mc_mujoco's PD otherwise gets the QP's velocity).
-    qp_zero_vel_out: true
+    # The real servo takes the angle only, but damps the change of its tracking
+    # error (hrp5p-iob), an implicit velocity reference; mc_mujoco's PD gets the
+    # QP's velocity as that reference, the closest to the robot (true would damp
+    # the joint velocity instead). No effect on the robot.
+    qp_zero_vel_out: false
     # Auto-HOLD above this measured joint speed (rad/s); see
     # NewRLQPController_maxJointVel in the logs.
     runaway_disarm_vel: 6.0
