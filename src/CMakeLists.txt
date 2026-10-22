@@ -11,6 +11,7 @@ find_library(ONNXRUNTIME_LIB
 )
 
 set(controller_SRC 
+  MotionTracker.cpp
   NewRLQPController.cpp
   RLPolicyInterface.cpp
   TrackingMotion.cpp
@@ -19,6 +20,7 @@ set(controller_SRC
 )
 
 set(controller_HDR 
+  MotionTracker.h
   NewRLQPController.h
   RLPolicyInterface.h
   TrackingMotion.h

@@ -693,6 +693,26 @@ Eigen::VectorXd utils::getCurrentObservation(mc_control::fsm::Controller & ctl_)
       for(int i = ctl.V3_DEEP_HISTORY_SIZE-1; i >= 0; --i) write3(ctl.velCmdDeep_[i]);
       break;
     }
+    case 9: // Whole-body motion tracking (MotionTracker, slots with a `tracking`
+            // section): the observation of mjlab's HRP5P tracking policies,
+            // no history, 220 dims for HRP5P = command[106] (reference joint
+            // angles then velocities of the motion's 53 joints),
+            // motion_anchor_pos_b[3], motion_anchor_ori_b[6], base_lin_vel[3]
+            // (IMU site, estimator), base_ang_vel[3] (gyro), joint_pos[33],
+            // joint_vel[33], actions[33] (raw previous action). Built by
+            // buildTrackingObservation (TrackingObservation.cpp, checked
+            // against mjlab by tests/tracking).
+    {
+      const Eigen::VectorXd tracking = ctl.tracker_.observation();
+      if(tracking.size() != obs.size())
+      {
+        mc_rtc::log::error_and_throw<std::runtime_error>(
+            "[NewRLQPController::utils] tracking observation of {} values, the network expects {}", tracking.size(),
+            obs.size());
+      }
+      appendToObs(tracking);
+      break;
+    }
     default:
     {
       mc_rtc::log::error("[NewRLQPController::utils] Unknown obs_format: {}", ctl.obsFormat_);

@@ -7,6 +7,7 @@
 
 #include "api.h"
 
+#include "MotionTracker.h"
 #include "RLPolicyInterface.h"
 #include "utils.h"
 
@@ -780,6 +781,13 @@ struct NewRLQPController_DLLAPI NewRLQPController : public mc_control::fsm::Cont
 
   /** @brief Utility helpers for FSM state lifecycle and observation building. */
   utils utilsClass;
+
+  /** @brief Motion tracking, active for the policy slots with a `tracking`
+   *  section (obs_format 9). See MotionTracker.h. */
+  MotionTracker tracker_{*this};
+
+  /** @brief The current policy's entry of `policies`. */
+  mc_rtc::Configuration policySlot() const { return config_("policies")[currentPolicyIndex]; }
 
   /** @brief Policy engaged? False until the operator arms it from the GUI.
    *

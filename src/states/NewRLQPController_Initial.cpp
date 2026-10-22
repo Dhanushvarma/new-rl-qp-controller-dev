@@ -25,17 +25,32 @@ bool NewRLQPController_Initial::run(mc_control::fsm::Controller & ctl_)
     // posture mc_rtc captured at reset. Clearing rlStarted_ means a re-arm
     // after a disarm re-captures the posture and ramps again, rather than
     // resuming from a stale target.
+    if(rlStarted_) { ctl.tracker_.stop(); }
     rlStarted_ = false;
     return false;
   }
 
+  // Tracking slots (obs_format 9) run MotionTracker: ramp to the motion's first
+  // frame, settle, track; the others the go-to-init ramp and run_rl_state.
+  const bool tracking = ctl.tracker_.enabled();
   if(!rlStarted_)
   {
-    ctl.utilsClass.start_rl_state(ctl, "RL_State");
+    if(tracking)
+    {
+      if(!ctl.tracker_.start())
+      {
+        ctl.policyArmed_ = false;
+        return false;
+      }
+    }
+    else { ctl.utilsClass.start_rl_state(ctl, "RL_State"); }
     rlStarted_ = true;
   }
 
-  ctl.utilsClass.run_rl_state(ctl);
+  if(tracking) { ctl.tracker_.run(); }
+  else { ctl.utilsClass.run_rl_state(ctl); }
+  // MotionTracker disarms on an error: leave the posture target where it is
+  if(!ctl.policyArmed_) { return false; }
 
   auto pt = ctl.getPostureTask(ctl.robot().name());
   if(!pt) { return false; }

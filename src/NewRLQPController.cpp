@@ -158,6 +158,9 @@ bool NewRLQPController::run()
   // restoreQPVelocity()'s own comment for why the ordering matters.
   if(useQP_ && qpZeroVelOut_) { restoreQPVelocity(); }
 
+  // Motion loads finished in the background, GUI refresh (tracking slots)
+  tracker_.update();
+
   updateVelocityCommand();
   if(printLimits_) computeLimits();
   if(logImpactVel_) updateImpactVelocity();
@@ -336,6 +339,7 @@ void NewRLQPController::reset(const mc_control::ControllerResetData & reset_data
   // Never resume armed across a reset: a controller switch or a re-reset must
   // put the robot back in the held state and require a deliberate re-arm.
   policyArmed_ = false;
+  tracker_.stop();
 
   checkFloatingBaseObserver();
 
@@ -744,6 +748,9 @@ void NewRLQPController::initializeRLPolicy()
 
 
   initializeRLObservation();
+
+  // After configRL(): the tracking section reads the action joints and the policy step
+  tracker_.configure();
 }
 
 void NewRLQPController::initializeRLObservation()
@@ -1644,6 +1651,11 @@ void NewRLQPController::addLog()
   logger().addLogEntry("NewRLQPController_maxJointVel",      [this]() { return maxJointVel_; });
   logger().addLogEntry("NewRLQPController_maxJointVelIndex", [this]() { return maxJointVelIndex_; });
 
+  // Tracking_* entries, when a slot tracks motions
+  bool tracking = false;
+  for(const auto & pol : config_("policies")) { tracking = tracking || pol.has("tracking"); }
+  if(tracking) { tracker_.addLog(); }
+
   if(logImpactVel_)
   {
     // Raw Fz logged unconditionally: needed to pick impactForceThreshold_ in
@@ -1783,6 +1795,13 @@ void NewRLQPController::addGui()
     mc_rtc::gui::Label("Policy state", [this]() { return policyArmed_ ? "ARMED" : "held (disarmed)"; }),
     mc_rtc::gui::Button("ARM policy", [this]() {
       if(policyArmed_) return;
+      // A tracking slot needs a loaded motion, the QP, ... (empty otherwise)
+      const std::string blocker = tracker_.armBlocker();
+      if(!blocker.empty())
+      {
+        mc_rtc::log::error("[NewRLQPController] ARM refused: {}", blocker);
+        return;
+      }
       policyArmed_ = true;
       mc_rtc::log::warning("[NewRLQPController] policy ARMED from the GUI");
     }),
