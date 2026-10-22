@@ -776,8 +776,18 @@ struct NewRLQPController_DLLAPI NewRLQPController : public mc_control::fsm::Cont
   double maxJointVel_ = 0.0;
   int maxJointVelIndex_ = -1;
 
-  /** @brief ONNX runtime wrapper for running policy inference. */
-  std::unique_ptr<RLPolicyInterface> rlPolicy;
+  /** @brief ONNX runtime wrapper for running policy inference: the current
+   *  slot's entry of policies_. */
+  std::shared_ptr<RLPolicyInterface> rlPolicy;
+
+  /** @brief Every policy_path entry's ONNX session, created once at
+   *  construction (preloadPolicies()), null for a slot that failed to load.
+   *  Creating a session reads the file and runs a test inference, hundreds of
+   *  milliseconds: a GUI policy switch runs in the control loop, so it only
+   *  picks one of these. */
+  std::vector<std::shared_ptr<RLPolicyInterface>> policies_;
+  /** @brief Why each slot of policies_ failed to load, empty if it loaded. */
+  std::vector<std::string> policyLoadErrors_;
 
   /** @brief Utility helpers for FSM state lifecycle and observation building. */
   utils utilsClass;
@@ -833,10 +843,15 @@ private:
   /** @brief Install the constraints needed by the QP backend. */
   void configureSolverConstraints();
 
-  /** @brief Load and validate the ONNX policy, build joint mappings. */
+  /** @brief Create every policy_path entry's ONNX session (policies_). The
+   *  startup slot failing to load throws; another one is logged and refused
+   *  by switchPolicy(). */
+  void preloadPolicies();
+
+  /** @brief Take the current slot's preloaded policy, build joint mappings. */
   void configRL();
 
-  /** @brief Instantiate rlPolicy and initialize observation buffers. */
+  /** @brief Take the slot's rlPolicy and initialize observation buffers. */
   void initializeRLPolicy();
 
    /**

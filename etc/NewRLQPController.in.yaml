@@ -95,6 +95,11 @@ init: NewRLQPController_Initial
 #
 # ARMER DEPUIS LA GUI, une main sur l'arret. Aucune de ces policies n'a encore
 # tourne, ni en simulation ni sur le robot.
+#
+# Every entry is loaded when the controller starts, so a GUI policy switch
+# reads nothing from disk in the control loop. The default_policy_index one
+# failing to load stops the start; another one is logged and switching to it
+# is refused.
 policy_path: [
   # hrp5_mirror (run mjlab exp1/2026-10-05_11-39-28, symetrie gauche/droite) :
   # meme observation (obs_format 8,

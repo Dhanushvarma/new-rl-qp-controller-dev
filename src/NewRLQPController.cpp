@@ -100,6 +100,8 @@ NewRLQPController::NewRLQPController(mc_rbdyn::RobotModulePtr rm, double dt, con
       {diPercent_, dsPercent_, 0.5}, velPercent_));
   solver().addConstraintSet(kinematicsConstraint);
 
+  // Before initializeRobot(): applyOnnxMetadata() reads the preloaded session
+  preloadPolicies();
   initializeRobot();
 
   datastore().make_call("KinematicAnchorFrame::" + robot().name(),
@@ -741,9 +743,42 @@ double NewRLQPController::postureTaskStiffness()
   return pt ? pt->stiffness() : 0.0;
 }
 
-void NewRLQPController::initializeRLPolicy()
+void NewRLQPController::preloadPolicies()
 {
   policyPaths_ = config_("policy_path", std::vector<std::string>{"walking_better_h1.onnx"});
+  if(currentPolicyIndex >= policyPaths_.size())
+    mc_rtc::log::error_and_throw("[NewRLQPController] default_policy_index {} out of range (have {} policies)",
+                                 currentPolicyIndex, policyPaths_.size());
+  // Every slot now, while the controller is constructed: creating a session
+  // reads the file, optimises the graph and runs a test inference (hundreds of
+  // milliseconds), and switchPolicy() runs in the control loop, where that
+  // stalls the ticks.
+  policies_.assign(policyPaths_.size(), nullptr);
+  policyLoadErrors_.assign(policyPaths_.size(), "");
+  for(size_t i = 0; i < policyPaths_.size(); ++i)
+  {
+    try
+    {
+      auto policy = std::make_shared<RLPolicyInterface>(policyPaths_[i]);
+      // A missing file or an unexpected model is reported by isLoaded(), not
+      // thrown (RLPolicyInterface::loadPolicy logs why)
+      if(!policy->isLoaded()) { throw std::runtime_error("not loaded, see the errors above"); }
+      policies_[i] = policy;
+    }
+    catch(const std::exception & e)
+    {
+      if(i == currentPolicyIndex)
+        mc_rtc::log::error_and_throw("[NewRLQPController] Failed to load RL policy [{}] {}: {}", i, policyPaths_[i],
+                                     e.what());
+      policyLoadErrors_[i] = e.what();
+      mc_rtc::log::error("[NewRLQPController] policy [{}] {} failed to load ({}): switching to it will be refused", i,
+                         policyPaths_[i], e.what());
+    }
+  }
+}
+
+void NewRLQPController::initializeRLPolicy()
+{
   configRL();
 
   currentObservation = Eigen::VectorXd::Zero(rlPolicy->getObservationSize());
@@ -895,6 +930,12 @@ bool NewRLQPController::switchPolicy(size_t index)
                        policyPaths_.size());
     return false;
   }
+  if(!policies_[index])
+  {
+    mc_rtc::log::error("[NewRLQPController] policy {} ({}) failed to load at startup ({}), switch refused", index,
+                       policyPaths_[index], policyLoadErrors_[index]);
+    return false;
+  }
   if(index == currentPolicyIndex)
   {
     mc_rtc::log::info("[NewRLQPController] policy {} already loaded", index);
@@ -912,7 +953,7 @@ bool NewRLQPController::switchPolicy(size_t index)
   try
   {
     initializeRobot();     // per-policy kp/kd/q0/action_scale/effort_limit/ratio/filter
-    initializeRLPolicy();  // ONNX + mappings + observation buffers
+    initializeRLPolicy();  // preloaded ONNX + mappings + observation buffers
   }
   catch(const std::exception & e)
   {
@@ -1328,23 +1369,16 @@ void NewRLQPController::applyOnnxMetadata()
     return;
   }
   const std::string & path = paths[currentPolicyIndex];
+  // From the session preloadPolicies() created, not a new one: this also runs
+  // on a GUI policy switch, in the control loop
+  if(currentPolicyIndex >= policies_.size() || !policies_[currentPolicyIndex])
+    mc_rtc::log::error_and_throw<std::runtime_error>("[NewRLQPController] cannot read the metadata of {}: not loaded",
+                                                     path);
   std::map<std::string, std::string> meta;
-  try
+  for(const char * key : {"run_path", "joint_names", "default_joint_pos", "action_scale", "observation_names"})
   {
-    Ort::Env env(ORT_LOGGING_LEVEL_ERROR, "onnx_metadata");
-    Ort::SessionOptions opts;
-    Ort::Session session(env, path.c_str(), opts);
-    Ort::AllocatorWithDefaultOptions alloc;
-    auto md = session.GetModelMetadata();
-    for(const char * key : {"run_path", "joint_names", "default_joint_pos", "action_scale", "observation_names"})
-    {
-      if(auto value = md.LookupCustomMetadataMapAllocated(key, alloc)) { meta[key] = value.get(); }
-    }
-  }
-  catch(const std::exception & e)
-  {
-    mc_rtc::log::error_and_throw<std::runtime_error>("[NewRLQPController] cannot read the metadata of {}: {}", path,
-                                                     e.what());
+    const std::string value = policies_[currentPolicyIndex]->customMetadata(key);
+    if(!value.empty()) { meta[key] = value; }
   }
   auto split = [](const std::string & s)
   {
@@ -1842,7 +1876,14 @@ void NewRLQPController::addGui()
     mc_rtc::gui::IntegerInput("Policy index (disarm to change)",
                               [this]() { return static_cast<int>(currentPolicyIndex); },
                               [this](int i) { if(i >= 0) switchPolicy(static_cast<size_t>(i)); }),
-    mc_rtc::gui::Label("Policies available", [this]() { return std::to_string(policyPaths_.size()); }),
+    mc_rtc::gui::Label("Policies available", [this]() {
+      std::string failed;
+      for(size_t i = 0; i < policies_.size(); ++i)
+      {
+        if(!policies_[i]) { failed += (failed.empty() ? "" : ", ") + std::to_string(i); }
+      }
+      return std::to_string(policyPaths_.size()) + (failed.empty() ? "" : " (failed to load: " + failed + ")");
+    }),
     mc_rtc::gui::Label("Current policy",   [this]() -> const std::string & { return policyPaths_[currentPolicyIndex]; }),
     mc_rtc::gui::Label("Policy Loaded",    [this]() { return rlPolicy->isLoaded() ? "Yes" : "No"; }),
     mc_rtc::gui::Label("Observation Size", [this]() { return std::to_string(rlPolicy->getObservationSize()); }),
@@ -1982,17 +2023,13 @@ void NewRLQPController::addGui()
 
 void NewRLQPController::configRL()
 {
-  mc_rtc::log::info("[NewRLQPController] Loading RL policy [{}]: {}", currentPolicyIndex, policyPaths_[currentPolicyIndex]);
-  try
-  {
-    rlPolicy = std::make_unique<RLPolicyInterface>(policyPaths_[currentPolicyIndex]);
-    mc_rtc::log::success("[NewRLQPController] RL policy loaded (obs={} act={})",
-                         rlPolicy->getObservationSize(), rlPolicy->getActionSize());
-  }
-  catch(const std::exception & e)
-  {
-    mc_rtc::log::error_and_throw("[NewRLQPController] Failed to load RL policy: {}", e.what());
-  }
+  // Preloaded at construction (preloadPolicies()): nothing is read from disk here
+  if(currentPolicyIndex >= policies_.size() || !policies_[currentPolicyIndex])
+    mc_rtc::log::error_and_throw("[NewRLQPController] RL policy [{}] {} is not loaded", currentPolicyIndex,
+                                 policyPaths_[currentPolicyIndex]);
+  rlPolicy = policies_[currentPolicyIndex];
+  mc_rtc::log::success("[NewRLQPController] RL policy [{}] {} (preloaded, obs={} act={})", currentPolicyIndex,
+                       policyPaths_[currentPolicyIndex], rlPolicy->getObservationSize(), rlPolicy->getActionSize());
 
   policyStepSize = config_("policies")[currentPolicyIndex]("policy_step_size", 0.01);
   const double physicsStepSize = config_("policies")[currentPolicyIndex]("physics_step_size", 0.001);
