@@ -114,6 +114,7 @@ NewRLQPController::NewRLQPController(mc_rbdyn::RobotModulePtr rm, double dt, con
   initializeRLPolicy();
 
   addGui();
+  verboseLog_ = config_("verbose_log", false);
   addLog();
   mc_rtc::log::success("NewRLQPController init done");
 }
@@ -1705,55 +1706,26 @@ void NewRLQPController::applySimServoGains()
 
 void NewRLQPController::addLog()
 {
-  // Ground-truth sch distances of the module's minimalSelfCollisions pairs,
-  // measured on the realRobot with the same convex objects as the QP.
-  auto & rr = realRobot(robots()[0].name());
-  for(const auto & col : robot().module().minimalSelfCollisions())
-  {
-    if(!rr.hasConvex(col.body1) || !rr.hasConvex(col.body2))
-    {
-      mc_rtc::log::warning("[NewRLQPController] selfcol_dist: no convex for {}/{}", col.body1, col.body2);
-      continue;
-    }
-    selfColPairs_.emplace_back(col.body1, col.body2,
-                               std::make_shared<sch::CD_Pair>(rr.convex(col.body1).second.get(),
-                                                              rr.convex(col.body2).second.get()));
-    mc_rtc::log::info("[NewRLQPController] selfcol_dist[{}] = {}/{}", selfColPairs_.size() - 1, col.body1,
-                      col.body2);
-  }
-  selfColDists_ = Eigen::VectorXd::Zero(static_cast<int>(selfColPairs_.size()));
-  logger().addLogEntry("NewRLQPController_selfcol_dist", [this]() -> const Eigen::VectorXd & {
-    const_cast<NewRLQPController *>(this)->updateSelfCollisionDistances();
-    return selfColDists_;
-  });
-  logger().addLogEntry("NewRLQPController_kp_base",          [this]() { return kpBase_; });
-  logger().addLogEntry("NewRLQPController_kd_base",          [this]() { return kdBase_; });
-  logger().addLogEntry("NewRLQPController_kp_current",       [this]() { return kp_; });
-  logger().addLogEntry("NewRLQPController_kd_current",       [this]() { return kd_; });
+  // Always: what a robot run needs to be debugged -- the targets (q_rl, and
+  // the control robot's joints, what the robot is sent), the actions, the
+  // modes, the armed and guard state, and (Tracking_*) the motion time, the
+  // observed base and the reference anchor. The rest is behind verbose_log,
+  // at the end of this function.
   logger().addLogEntry("NewRLQPController_pd_gains_ratio",   [this]() { return pdGainsRatio_; });
   logger().addLogEntry("NewRLQPController_RL_q",             [this]() { return q_rl; });
-  logger().addLogEntry("NewRLQPController_RL_qZero",         [this]() { return q_zero; });
-  logger().addLogEntry("NewRLQPController_qdTarget",         [this]() { return qdTarget_; });
   // What mc_mujoco's PD actually receives. The stock qOut/alphaOut entries
   // read outputRobot() (the canonical robot), NOT the control robot mujoco
   // reads -- in bypass they showed alpha=0.0003 while the commanded value was
   // -0.044, which is what made the QP-vs-bypass difference invisible in the
-  // 2026-08-07 logs. These two read the same mbc() mujoco does.
+  // 2026-08-07 logs. This one and ctrl_alpha (verbose) read the same mbc()
+  // mujoco does.
   logger().addLogEntry("NewRLQPController_ctrl_q", [this]() -> Eigen::VectorXd {
     Eigen::VectorXd v = Eigen::VectorXd::Zero(nbActuatedJoints);
     for(int i = 0; i < nbActuatedJoints; ++i)
       v(i) = robot().mbc().q[robot().jointIndexByName(jointNames[i])][0];
     return v;
   });
-  logger().addLogEntry("NewRLQPController_ctrl_alpha", [this]() -> Eigen::VectorXd {
-    Eigen::VectorXd v = Eigen::VectorXd::Zero(nbActuatedJoints);
-    for(int i = 0; i < nbActuatedJoints; ++i)
-      v(i) = robot().mbc().alpha[robot().jointIndexByName(jointNames[i])][0];
-    return v;
-  });
-  logger().addLogEntry("NewRLQPController_RL_currentObservation", [this]() { return currentObservation; });
   logger().addLogEntry("NewRLQPController_RL_currentAction", [this]() { return currentAction; });
-  logger().addLogEntry("NewRLQPController_RL_actionScale",   [this]() { return actionScale; });
   logger().addLogEntry("NewRLQPController_useQP",            [this]() { return useQP_; });
   logger().addLogEntry("NewRLQPController_qpZeroVelOut",     [this]() { return qpZeroVelOut_; });
   logger().addLogEntry("NewRLQPController_postureRefVel",    [this]() { return postureRefVel_; });
@@ -1791,6 +1763,49 @@ void NewRLQPController::addLog()
     logger().addLogEntry("NewRLQPController_leftFootImpactVel",  [this]() { return leftFootImpactVel_; });
     logger().addLogEntry("NewRLQPController_rightFootImpactVel", [this]() { return rightFootImpactVel_; });
   }
+
+  // The rest only with verbose_log, about half of the per-tick volume:
+  // constants (gains, q0, action scale), the observation, the control robot's
+  // velocities, copies of what mc_rtc logs anyway (tauIn holds the currents,
+  // qIn the encoders), the velocity policies' raw-torque channel, and the
+  // self-collision distances, computed every tick for this log only.
+  if(!verboseLog_) { return; }
+
+  // Ground-truth sch distances of the module's minimalSelfCollisions pairs,
+  // measured on the realRobot with the same convex objects as the QP.
+  auto & rr = realRobot(robots()[0].name());
+  for(const auto & col : robot().module().minimalSelfCollisions())
+  {
+    if(!rr.hasConvex(col.body1) || !rr.hasConvex(col.body2))
+    {
+      mc_rtc::log::warning("[NewRLQPController] selfcol_dist: no convex for {}/{}", col.body1, col.body2);
+      continue;
+    }
+    selfColPairs_.emplace_back(col.body1, col.body2,
+                               std::make_shared<sch::CD_Pair>(rr.convex(col.body1).second.get(),
+                                                              rr.convex(col.body2).second.get()));
+    mc_rtc::log::info("[NewRLQPController] selfcol_dist[{}] = {}/{}", selfColPairs_.size() - 1, col.body1,
+                      col.body2);
+  }
+  selfColDists_ = Eigen::VectorXd::Zero(static_cast<int>(selfColPairs_.size()));
+  logger().addLogEntry("NewRLQPController_selfcol_dist", [this]() -> const Eigen::VectorXd & {
+    const_cast<NewRLQPController *>(this)->updateSelfCollisionDistances();
+    return selfColDists_;
+  });
+  logger().addLogEntry("NewRLQPController_kp_base",          [this]() { return kpBase_; });
+  logger().addLogEntry("NewRLQPController_kd_base",          [this]() { return kdBase_; });
+  logger().addLogEntry("NewRLQPController_kp_current",       [this]() { return kp_; });
+  logger().addLogEntry("NewRLQPController_kd_current",       [this]() { return kd_; });
+  logger().addLogEntry("NewRLQPController_RL_qZero",         [this]() { return q_zero; });
+  logger().addLogEntry("NewRLQPController_qdTarget",         [this]() { return qdTarget_; });
+  logger().addLogEntry("NewRLQPController_ctrl_alpha", [this]() -> Eigen::VectorXd {
+    Eigen::VectorXd v = Eigen::VectorXd::Zero(nbActuatedJoints);
+    for(int i = 0; i < nbActuatedJoints; ++i)
+      v(i) = robot().mbc().alpha[robot().jointIndexByName(jointNames[i])][0];
+    return v;
+  });
+  logger().addLogEntry("NewRLQPController_RL_currentObservation", [this]() { return currentObservation; });
+  logger().addLogEntry("NewRLQPController_RL_actionScale",   [this]() { return actionScale; });
 
   // Ce que les drives mesurent, en amperes : sur RHPS1 le "tau" de
   // RobotHardware est un courant, gearRatio et torqueConst valant 1 dans le

@@ -869,31 +869,8 @@ void MotionTracker::addLog()
   add("t", [this]() { return t_; });
   add("frame", [this]() { return static_cast<double>(usedFrame_); });
   add("motionTime", [this]() { return motionTime(); });
-  add("obs", [this]() -> const Eigen::VectorXd & { return obs_; });
   add("action", [this]() -> const Eigen::VectorXd & { return lastAction_; });
-  add("command", [this]() -> const Eigen::VectorXd & { return command_; });
   add("target", [this]() -> const Eigen::VectorXd & { return target_; });
-  // The PostureTask's target of the policy joints, action order
-  add("postureTarget",
-      [this]() -> Eigen::VectorXd
-      {
-        Eigen::VectorXd out = Eigen::VectorXd::Constant(nAct_, std::numeric_limits<double>::quiet_NaN());
-        auto pt = ctl_.getPostureTask(ctl_.robot().name());
-        if(!pt)
-        {
-          return out;
-        }
-        const auto & posture = pt->posture();
-        for(Eigen::Index j = 0; j < nAct_; ++j)
-        {
-          const auto & p = posture[mbcIndex_[static_cast<size_t>(j)]];
-          if(!p.empty())
-          {
-            out(j) = p[0];
-          }
-        }
-        return out;
-      });
   // The observed base (from tracking.base_source, as of the last observation) and the reference anchor
   add("baseSource", [this]() { return static_cast<int>(baseSource_); }); // 0 estimate, 1 ground truth
   add("anchorPos", [this]() -> const Eigen::Vector3d & { return in_.anchorPos; });
@@ -925,6 +902,36 @@ void MotionTracker::addLog()
     add("baseGT_linVelWorld", [bs]() -> const Eigen::Vector3d & { return bs->linearVelocity(); });
     add("baseGT_angVelBody", [bs]() -> const Eigen::Vector3d & { return bs->angularVelocity(); });
   }
+  // With verbose_log only (NewRLQPController::verboseLog_): the observation, the command before the filter, the
+  // PostureTask's target (the policy joints of NewRLQPController_RL_q), and the joint states in reference order (the
+  // encoders are in qIn, the commanded angles in NewRLQPController_ctrl_q)
+  if(!ctl_.verboseLog_)
+  {
+    return;
+  }
+  add("obs", [this]() -> const Eigen::VectorXd & { return obs_; });
+  add("command", [this]() -> const Eigen::VectorXd & { return command_; });
+  // The PostureTask's target of the policy joints, action order
+  add("postureTarget",
+      [this]() -> Eigen::VectorXd
+      {
+        Eigen::VectorXd out = Eigen::VectorXd::Constant(nAct_, std::numeric_limits<double>::quiet_NaN());
+        auto pt = ctl_.getPostureTask(ctl_.robot().name());
+        if(!pt)
+        {
+          return out;
+        }
+        const auto & posture = pt->posture();
+        for(Eigen::Index j = 0; j < nAct_; ++j)
+        {
+          const auto & p = posture[mbcIndex_[static_cast<size_t>(j)]];
+          if(!p.empty())
+          {
+            out(j) = p[0];
+          }
+        }
+        return out;
+      });
   add("qReal", [real]() { return toRefOrder(*real, real->mbc().q); });
   add("alphaReal", [real]() { return toRefOrder(*real, real->mbc().alpha); });
   add("tauReal", [real]() { return toRefOrder(*real, real->mbc().jointTorque); });

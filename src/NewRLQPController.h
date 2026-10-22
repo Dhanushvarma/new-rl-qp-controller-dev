@@ -808,6 +808,11 @@ struct NewRLQPController_DLLAPI NewRLQPController : public mc_control::fsm::Cont
   /** @brief The current policy's entry of `policies`. */
   mc_rtc::Configuration policySlot() const { return config_("policies")[currentPolicyIndex]; }
 
+  /** @brief verbose_log (top level, default false): log every entry, not only
+   *  what a robot run needs to be debugged (see addLog() and
+   *  MotionTracker::addLog()). About twice the log volume. */
+  bool verboseLog_ = false;
+
   /** @brief Policy engaged? False until the operator arms it from the GUI.
    *
    * Loading the controller and running the policy are deliberately separate on

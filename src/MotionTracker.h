@@ -116,7 +116,7 @@ struct MotionTracker
   /** Every controller tick, before the FSM: takes finished motion loads, refreshes the GUI. */
   void update();
 
-  /** Register the Tracking_* log entries */
+  /** Register the Tracking_* log entries (some only with verbose_log) */
   void addLog();
 
   /** Select a motion of the motions directory by file name (refused while armed); it loads in the background */
