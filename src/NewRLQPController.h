@@ -82,6 +82,9 @@ struct NewRLQPController_DLLAPI NewRLQPController : public mc_control::fsm::Cont
   /** @brief Enable or disable the CBF-QP layer at runtime. */
   void activateQPControl(bool activate);
 
+  /** @brief Set q_rl to the PostureTask's current target (every disarmed tick). */
+  void syncQRlToPostureTarget();
+
   /**
    * @brief Populate the history buffers with the current robot state.
    *

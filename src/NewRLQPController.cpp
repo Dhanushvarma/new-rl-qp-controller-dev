@@ -183,6 +183,14 @@ bool NewRLQPController::run()
     }
   }
 
+  // Disarmed: q_rl follows the posture target the PostureTask holds (frozen at
+  // the last command, or the posture mc_rtc captured at reset). Without it q_rl
+  // keeps whatever it was last given -- q_zero after reset() -- and the write
+  // below hands that to the PostureTask on the arming tick, before the state
+  // overwrites it: harmless for start_rl_state, which overwrites it in the same
+  // tick, but a jump for anything that starts from the held posture.
+  if(!policyArmed_) syncQRlToPostureTarget();
+
   // Disarmed: never write the target. Whichever task is driving then keeps
   // whatever mc_rtc captured at reset, so the robot holds its stance under the
   // QP until the operator arms the policy from the GUI.
@@ -246,6 +254,18 @@ bool NewRLQPController::run()
   if(useQP_ && qpZeroVelOut_) { zeroAlphaOut(); }
 
   return ret;
+}
+
+void NewRLQPController::syncQRlToPostureTarget()
+{
+  auto pt = getPostureTask(robot().name());
+  if(!pt) { return; }
+  const auto & posture = pt->posture();
+  for(int i = 0; i < nbActuatedJoints; ++i)
+  {
+    const auto & p = posture[robot().jointIndexByName(jointNames[i])];
+    if(!p.empty()) { q_rl(i) = p[0]; }
+  }
 }
 
 double NewRLQPController::postureStiffness() const
