@@ -94,6 +94,18 @@ MotionTracker::~MotionTracker()
   }
 }
 
+const char * MotionTracker::baseSourceName(BaseSource s)
+{
+  switch(s)
+  {
+    case BaseSource::Estimate:
+      return "estimate";
+    case BaseSource::GroundTruth:
+      return "ground_truth";
+  }
+  return "?";
+}
+
 const char * MotionTracker::stateName(State s)
 {
   switch(s)
@@ -177,7 +189,24 @@ void MotionTracker::configure()
   {
     mc_rtc::log::error_and_throw("[Tracking] arm_ramp_speed must be > 0 and arm_settle_time >= 0");
   }
-  useGroundTruthBase_ = tracking("use_ground_truth_base", false);
+  if(tracking.has("use_ground_truth_base"))
+  {
+    mc_rtc::log::error_and_throw("[Tracking] use_ground_truth_base is replaced by base_source (estimate or "
+                                 "ground_truth)");
+  }
+  const std::string baseSource = tracking("base_source", std::string("estimate"));
+  if(baseSource == "estimate")
+  {
+    baseSource_ = BaseSource::Estimate;
+  }
+  else if(baseSource == "ground_truth")
+  {
+    baseSource_ = BaseSource::GroundTruth;
+  }
+  else
+  {
+    mc_rtc::log::error_and_throw("[Tracking] base_source {} is not estimate or ground_truth", baseSource);
+  }
   fallHeight_ = tracking("fall_height", 0.5);
   motionsDir_ = tracking("motions_dir", std::string(NEWRLQP_MOTIONS_DIR));
 
@@ -273,10 +302,9 @@ void MotionTracker::configure()
 
   rescan();
   mc_rtc::log::info("[Tracking] policy {} tracks motions: {} CSVs in {}; filter {} Hz (alpha {:.4f}); one inference "
-                    "every {} ticks; {} base; ARM ramps at {} rad/s, then {} s settle",
+                    "every {} ticks; base_source {}; ARM ramps at {} rad/s, then {} s settle",
                     ctl.currentPolicyIndex, motionFiles_.size(), motionsDir_, cutoffHz_, alpha_, ticksPerStep_,
-                    useGroundTruthBase_ ? "GROUND-TRUTH (simulation only)" : "estimated", armRampSpeed_,
-                    armSettleTime_);
+                    baseSourceName(baseSource_), armRampSpeed_, armSettleTime_);
   std::string motion;
   tracking("motion", motion);
   if(!motion.empty())
@@ -450,6 +478,11 @@ void MotionTracker::update()
     guiDirty_ = false;
     buildGui();
   }
+  // Both base sources, for the logs, whatever the source and the arming state
+  if(enabled_)
+  {
+    readBaseSources();
+  }
 }
 
 std::string MotionTracker::armBlocker() const
@@ -471,9 +504,10 @@ std::string MotionTracker::armBlocker() const
     return selected_.empty() ? "no motion selected" : fmt::format("motion {} is not ready ({})", selected_,
                                                                   motionStatus_);
   }
-  if(useGroundTruthBase_ && !ctl_.isSimulated())
+  if(baseSource_ == BaseSource::GroundTruth
+     && (!ctl_.isSimulated() || !ctl_.robot().hasBodySensor("FloatingBase")))
   {
-    return "use_ground_truth_base is for simulation only";
+    return "base_source ground_truth is for simulation only";
   }
   return "";
 }
@@ -597,41 +631,69 @@ void MotionTracker::run()
   }
 }
 
-void MotionTracker::readRobot()
+void MotionTracker::readEstimate(BaseState & out)
 {
-  const auto & control = ctl_.robot();
-  const auto & real = ctl_.realRobot(control.name());
-
-  // Estimate: the real robot's floating base (observer pipeline) and kinematics (encoders); the base angular
+  const auto & real = ctl_.realRobot(ctl_.robot().name());
+  // The real robot's floating base as the observer pipeline sets it, and its kinematics (encoders); the angular
   // velocity from the gyro, MCWaiko's being identically zero (see utils.cpp, obs_format 0)
   const sva::MotionVecd & velB = real.mbc().bodyVelB[real.bodyIndexByName(baseBody_)];
-  in_.baseLinVel = velB.linear();
-  estAngVel_ = velB.angular();
-  in_.baseAngVel = real.bodySensor(imuSensor_).angularVelocity();
-  bodyPose(real.bodyPosW(anchorBody_), in_.anchorPos, in_.anchorRot);
+  out.linVel = velB.linear();
+  observerAngVel_ = velB.angular();
+  out.angVel = real.bodySensor(imuSensor_).angularVelocity();
+  bodyPose(real.bodyPosW(anchorBody_), out.anchorPos, out.anchorRot);
+}
 
-  // Ground truth (simulation): the simulator's free joint for the base, the real robot's kinematics from the base to
-  // the anchor
-  if(control.hasBodySensor("FloatingBase"))
+bool MotionTracker::readGroundTruth(BaseState & out)
+{
+  const auto & control = ctl_.robot();
+  if(!control.hasBodySensor("FloatingBase"))
   {
-    const auto & bs = control.bodySensor("FloatingBase");
-    const Eigen::Matrix3d rot = bs.orientation().inverse().toRotationMatrix();
-    const sva::PTransformd X_0_base(Eigen::Matrix3d(rot.transpose()), bs.position());
-    const sva::PTransformd X_base_anchor = real.bodyPosW(anchorBody_) * real.bodyPosW(baseBody_).inv();
-    bodyPose(X_base_anchor * X_0_base, gtAnchorPos_, gtAnchorRot_);
-    if(useGroundTruthBase_)
-    {
-      in_.baseLinVel = rot.transpose() * bs.linearVelocity();
-      in_.baseAngVel = bs.angularVelocity();
-      in_.anchorPos = gtAnchorPos_;
-      in_.anchorRot = gtAnchorRot_;
-    }
+    return false;
   }
-  else if(useGroundTruthBase_)
-  {
-    throw std::runtime_error("use_ground_truth_base needs the FloatingBase body sensor");
-  }
+  // The simulator's free joint for the base, the real robot's kinematics from the base to the anchor
+  const auto & real = ctl_.realRobot(control.name());
+  const auto & bs = control.bodySensor("FloatingBase");
+  const Eigen::Matrix3d rot = bs.orientation().inverse().toRotationMatrix();
+  const sva::PTransformd X_0_base(Eigen::Matrix3d(rot.transpose()), bs.position());
+  const sva::PTransformd X_base_anchor = real.bodyPosW(anchorBody_) * real.bodyPosW(baseBody_).inv();
+  bodyPose(X_base_anchor * X_0_base, out.anchorPos, out.anchorRot);
+  out.linVel = rot.transpose() * bs.linearVelocity();
+  out.angVel = bs.angularVelocity();
+  return true;
+}
 
+void MotionTracker::readBaseSources()
+{
+  readEstimate(est_);
+  gtAvailable_ = readGroundTruth(gt_);
+}
+
+const MotionTracker::BaseState & MotionTracker::observedBase() const
+{
+  switch(baseSource_)
+  {
+    case BaseSource::Estimate:
+      return est_;
+    case BaseSource::GroundTruth:
+      if(!gtAvailable_)
+      {
+        throw std::runtime_error("base_source ground_truth needs the FloatingBase body sensor");
+      }
+      return gt_;
+  }
+  throw std::runtime_error("unknown base_source");
+}
+
+void MotionTracker::readRobot()
+{
+  readBaseSources();
+  const BaseState & base = observedBase();
+  in_.baseLinVel = base.linVel;
+  in_.baseAngVel = base.angVel;
+  in_.anchorPos = base.anchorPos;
+  in_.anchorRot = base.anchorRot;
+
+  const auto & real = ctl_.realRobot(ctl_.robot().name());
   for(Eigen::Index j = 0; j < nAct_; ++j)
   {
     const auto index = mbcIndex_[static_cast<size_t>(j)];
@@ -653,8 +715,7 @@ void MotionTracker::startTracking()
   mc_rtc::log::success("[Tracking] tracking {} from frame 0: robot anchor at ({:.3f}, {:.3f}, {:.3f}) heading {:.1f} "
                        "deg ({}), one inference every {} ticks",
                        selected_, in_.anchorPos.x(), in_.anchorPos.y(), in_.anchorPos.z(),
-                       heading(in_.anchorRot) * 180.0 / M_PI, useGroundTruthBase_ ? "ground truth" : "estimate",
-                       ticksPerStep_);
+                       heading(in_.anchorRot) * 180.0 / M_PI, baseSourceName(baseSource_), ticksPerStep_);
 }
 
 Eigen::VectorXd MotionTracker::observation()
@@ -811,15 +872,27 @@ void MotionTracker::addLog()
         }
         return out;
       });
+  // The observed base (from tracking.base_source, as of the last observation) and the reference anchor
+  add("baseSource", [this]() { return static_cast<int>(baseSource_); }); // 0 estimate, 1 ground truth
   add("anchorPos", [this]() -> const Eigen::Vector3d & { return in_.anchorPos; });
   add("anchorQuat", [this]() { return Eigen::Quaterniond(in_.anchorRot).normalized(); });
-  add("refAnchorPos", [this]() -> const Eigen::Vector3d & { return in_.refAnchorPos; });
-  add("refAnchorQuat", [this]() { return Eigen::Quaterniond(in_.refAnchorRot).normalized(); });
-  add("gtAnchorPos", [this]() -> const Eigen::Vector3d & { return gtAnchorPos_; });
-  add("gtAnchorQuat", [this]() { return Eigen::Quaterniond(gtAnchorRot_).normalized(); });
   add("baseLinVel", [this]() -> const Eigen::Vector3d & { return in_.baseLinVel; });
   add("baseAngVel", [this]() -> const Eigen::Vector3d & { return in_.baseAngVel; });
-  add("baseAngVelEst", [this]() -> const Eigen::Vector3d & { return estAngVel_; });
+  add("refAnchorPos", [this]() -> const Eigen::Vector3d & { return in_.refAnchorPos; });
+  add("refAnchorQuat", [this]() { return Eigen::Quaterniond(in_.refAnchorRot).normalized(); });
+  // Every source, every tick, whatever the observed one
+  add("estAnchorPos", [this]() -> const Eigen::Vector3d & { return est_.anchorPos; });
+  add("estAnchorQuat", [this]() { return Eigen::Quaterniond(est_.anchorRot).normalized(); });
+  add("estBaseLinVel", [this]() -> const Eigen::Vector3d & { return est_.linVel; });
+  add("estBaseAngVel", [this]() -> const Eigen::Vector3d & { return est_.angVel; });
+  add("observerAngVel", [this]() -> const Eigen::Vector3d & { return observerAngVel_; });
+  if(control->hasBodySensor("FloatingBase"))
+  {
+    add("gtAnchorPos", [this]() -> const Eigen::Vector3d & { return gt_.anchorPos; });
+    add("gtAnchorQuat", [this]() { return Eigen::Quaterniond(gt_.anchorRot).normalized(); });
+    add("gtBaseLinVel", [this]() -> const Eigen::Vector3d & { return gt_.linVel; });
+    add("gtBaseAngVel", [this]() -> const Eigen::Vector3d & { return gt_.angVel; });
+  }
   add("baseEst_pos", [real]() -> Eigen::Vector3d { return real->posW().translation(); });
   add("baseEst_quat", [real]() { return Eigen::Quaterniond(real->posW().rotation().transpose()).normalized(); });
   if(control->hasBodySensor("FloatingBase"))

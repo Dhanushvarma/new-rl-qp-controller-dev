@@ -36,10 +36,14 @@ struct NewRLQPController;
  * - HOLD (any disarm: GUI, runaway guard, or an error here): nothing writes the posture target any more, so it stays
  *   at the last command; the next ARM starts over from the ramp.
  *
- * Observation sources: the anchor pose and the base linear velocity of the real robot's floating base (the observer
- * pipeline's estimate, MCWaiko), the base angular velocity from the IMU gyro (`tracking.imu_sensor`, MCWaiko's
- * floating-base angular velocity being identically zero), the encoders; or, in simulation only, the simulator's
- * ground-truth base (FloatingBase body sensor) with `tracking.use_ground_truth_base`.
+ * Observation sources: the encoders for the joints, and for the floating base (anchor pose, base linear and angular
+ * velocity) the source `tracking.base_source` selects, read in one place (observedBase()):
+ * - estimate (default): the real robot's floating base as the observer pipeline sets it (MCWaiko) for the anchor pose
+ *   and the base linear velocity, the IMU gyro (`tracking.imu_sensor`) for the angular velocity (MCWaiko's
+ *   floating-base angular velocity being identically zero);
+ * - ground_truth: the simulator's free joint (FloatingBase body sensor), simulation only.
+ * Both are read and logged every tick whatever the source (Tracking_est*, Tracking_gt*). Another source (e.g. motion
+ * capture) is a BaseSource value, a reader filling a BaseState and a case in observedBase().
  */
 struct MotionTracker
 {
@@ -50,6 +54,22 @@ struct MotionTracker
     Settling = 2,
     Tracking = 3,
     Ended = 4
+  };
+
+  /** Where the observed floating-base state comes from (`tracking.base_source`) */
+  enum class BaseSource
+  {
+    Estimate = 0,
+    GroundTruth = 1
+  };
+
+  /** The floating-base state a tracking policy observes, from one source */
+  struct BaseState
+  {
+    Eigen::Vector3d anchorPos = Eigen::Vector3d::Zero(); ///< Anchor position, world frame
+    Eigen::Matrix3d anchorRot = Eigen::Matrix3d::Identity(); ///< Anchor orientation, anchor to world
+    Eigen::Vector3d linVel = Eigen::Vector3d::Zero(); ///< Base origin velocity, base frame
+    Eigen::Vector3d angVel = Eigen::Vector3d::Zero(); ///< Base angular velocity, base frame
   };
 
   explicit MotionTracker(NewRLQPController & ctl) : ctl_(ctl) {}
@@ -99,6 +119,8 @@ struct MotionTracker
 
   static const char * stateName(State s);
 
+  static const char * baseSourceName(BaseSource s);
+
 private:
   struct LoadJob
   {
@@ -117,7 +139,15 @@ private:
 
   /** Disarm the controller after an error, with the reason */
   void fail(const std::string & why);
-  /** Robot state for the observation and the logs (estimate or ground truth), into in_ */
+  /** The estimate source: the observer pipeline's floating base and the IMU gyro */
+  void readEstimate(BaseState & out);
+  /** The ground-truth source: the simulator's free joint; false if the robot has no FloatingBase body sensor */
+  bool readGroundTruth(BaseState & out);
+  /** Read every base source (for the logs, and the observed one) */
+  void readBaseSources();
+  /** The base state the observation uses, from tracking.base_source: the one place that picks the source */
+  const BaseState & observedBase() const;
+  /** Robot state for the observation (the observed base and the encoders), into in_ */
   void readRobot();
   void startTracking();
   void infer();
@@ -140,7 +170,7 @@ private:
   double alpha_ = 1.0;
   double armRampSpeed_ = 0.1;
   double armSettleTime_ = 1.0;
-  bool useGroundTruthBase_ = false;
+  BaseSource baseSource_ = BaseSource::Estimate;
   double fallHeight_ = 0.5;
   std::string motionsDir_;
   std::vector<std::string> motionFiles_; ///< CSV file names in motionsDir_, sorted
@@ -185,7 +215,8 @@ private:
   Eigen::VectorXd lastAction_; ///< Raw action of the last inference
   Eigen::VectorXd obs_;
   TrackingObservationInput in_;
-  Eigen::Vector3d estAngVel_ = Eigen::Vector3d::Zero(); ///< The estimator's base angular velocity (not observed)
-  Eigen::Vector3d gtAnchorPos_ = Eigen::Vector3d::Zero();
-  Eigen::Matrix3d gtAnchorRot_ = Eigen::Matrix3d::Identity();
+  BaseState est_; ///< The estimate source, read every tick
+  BaseState gt_; ///< The ground-truth source, read every tick when available
+  bool gtAvailable_ = false;
+  Eigen::Vector3d observerAngVel_ = Eigen::Vector3d::Zero(); ///< The observer pipeline's base angular velocity (logged)
 };

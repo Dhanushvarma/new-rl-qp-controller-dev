@@ -563,8 +563,11 @@ policies:
       # at least 1 s), then a hold of arm_settle_time (s) before frame 0.
       arm_ramp_speed: 0.1
       arm_settle_time: 2.0
-      # Simulation only (refused on the robot): observe the simulator's base.
-      use_ground_truth_base: false
+      # Where the observed floating-base state (anchor pose, base velocities)
+      # comes from: estimate (the observer pipeline's floating base, MCWaiko, and
+      # the IMU gyro) or ground_truth (the simulator's free joint, refused on the
+      # robot). Both are logged whatever the source (Tracking_est*, Tracking_gt*).
+      base_source: estimate
     # From the P6 package's policy.yaml (export_deploy.py). q0: the 35 actuated
     # joints (RHDY/LHDY are held at 0); kp/kd only feed logs and the QP bypass
     # here, the PostureTask drives the robot.
