@@ -19,6 +19,12 @@ if(NOT TARGET mc_rtc::mc_control)
 endif()
 find_package(mc_joystick_plugin REQUIRED)
 
+# Reference motions of the tracking policies (motions/*.csv), installed next to
+# the policies. A tracking slot lists this directory unless its tracking
+# section sets motions_dir. Set before src/: the controller is built with it as
+# the default.
+set(RL_MOTIONS_INSTALL_PREFIX "${CMAKE_INSTALL_PREFIX}/share/${PROJECT_NAME}/motions")
+
 add_subdirectory(src)
 
 # if(BUILD_TESTING)
@@ -35,6 +41,10 @@ set(RL_POLICY_INSTALL_PREFIX "${CMAKE_INSTALL_PREFIX}/share/${PROJECT_NAME}/poli
 # and a newly added policy is silently left out of the install tree.
 file(GLOB RL_POLICY_FILES CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/policy/*.onnx")
 install(FILES ${RL_POLICY_FILES} DESTINATION "${RL_POLICY_INSTALL_PREFIX}")
+
+# Read when the install runs: a motion added to motions/ needs no reconfigure.
+install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/motions/" DESTINATION "${RL_MOTIONS_INSTALL_PREFIX}"
+        FILES_MATCHING PATTERN "*.csv")
 
 configure_file(etc/NewRLQPController.in.yaml
                "${CMAKE_CURRENT_BINARY_DIR}/etc/NewRLQPController.yaml")
