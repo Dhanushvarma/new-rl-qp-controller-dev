@@ -40,11 +40,31 @@ ObserverPipelines:
     # WAIKO estimator: IMU + legged odometry (no QP contacts needed).
     # imuSensor must be the real IMU (Accelerometer, gyro+accelero at the imu
     # site) -- FloatingBase is the mc_mujoco ground-truth pose sensor.
-    # filterGains/leggedOdometry come from the installed default MCWaiko.yaml.
+    # leggedOdometry and filterGains: the lab controller's settings
+    # (hrp5p_rl_qp_controller), under which the tracking policy's estimated-base
+    # runs were checked. Without an odometry type MCWaiko uses none and the
+    # estimate never updates its yaw nor its horizontal position (measured in
+    # mc_mujoco: 29.7 deg of yaw error within 2 s of tracking): harmless for the
+    # velocity policies, which do not observe them, wrong for the tracking
+    # observation (anchor pose against the reference). These apply to every
+    # slot; they override any installed default MCWaiko.yaml.
     - type: MCWaiko
       update: true
       gui: true
       imuSensor: Accelerometer
+      leggedOdometry:
+        odometryType: 6D
+      filterGains:
+        initAlpha: 4
+        initRho: 2
+        initBeta: 4
+        initGamma: 1
+        initMu: 1
+        finalAlpha: 4
+        finalRho: 1
+        finalBeta: 4
+        finalGamma: 1
+        finalMu: 1
       contacts:
         contactsDetection: Surfaces
         surfacesForContactDetection: [RightFootCenter, LeftFootCenter]
