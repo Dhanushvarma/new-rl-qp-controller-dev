@@ -24,6 +24,9 @@ add_subdirectory(src)
 # if(BUILD_TESTING)
 #   add_subdirectory(tests)
 # endif()
+if(BUILD_TESTING)
+  add_subdirectory(tests/tracking)
+endif()
 
 # Bundled policies, installed so the configured yaml can reference them with
 # a machine-independent path.
