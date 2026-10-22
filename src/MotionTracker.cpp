@@ -744,9 +744,18 @@ void MotionTracker::infer()
     fail("non-finite observation");
     return;
   }
-  const Eigen::VectorXd action = ctl_.rlPolicy->predict(obs);
-  // RLPolicyInterface answers a failed inference with zeros
-  if(action.size() != nAct_ || !action.allFinite() || (action.array() == 0.0).all())
+  // A failed inference throws (no substitute action): disarm, the posture target stays at the last command
+  Eigen::VectorXd action;
+  try
+  {
+    action = ctl_.rlPolicy->predict(obs);
+  }
+  catch(const std::exception & e)
+  {
+    fail(fmt::format("policy inference failed ({})", e.what()));
+    return;
+  }
+  if(action.size() != nAct_ || !action.allFinite())
   {
     fail("the policy gave no valid action");
     return;

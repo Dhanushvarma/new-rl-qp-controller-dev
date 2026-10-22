@@ -235,40 +235,20 @@ std::string RLPolicyInterface::customMetadata(const std::string & key) const
 
 Eigen::VectorXd RLPolicyInterface::predict(const Eigen::VectorXd & observation)
 {
+  // No zero action on a failure any more: for a position policy zeros are a
+  // jump to q0, and they were returned (and logged) every policy step. The
+  // caller holds the last target and disarms, which also stops the inferences.
   if(!isLoaded_)
   {
-    mc_rtc::log::error("Policy not loaded, returning zero action");
-    return Eigen::VectorXd::Zero(outputSize_);
+    throw std::runtime_error("the policy " + policyPath_ + " is not loaded");
   }
-  
   if(observation.size() != getObservationSize())
   {
-    mc_rtc::log::error("Observation size mismatch: expected {}, got {}", 
-                       getObservationSize(), observation.size());
-    return Eigen::VectorXd::Zero(outputSize_);
+    throw std::runtime_error("observation size " + std::to_string(observation.size()) + ", the policy takes "
+                             + std::to_string(getObservationSize()));
   }
-  
-  if(!policyPath_.empty() && policyPath_.size() >= 5)
-  {
-    std::string ext = policyPath_.substr(policyPath_.size() - 5);
-    if(ext == ".onnx")
-    {
-      try
-      {
-        return runOnnxInference(observation);
-      }
-      catch(const std::exception & e)
-      {
-        mc_rtc::log::error("ONNX inference failed: {}", e.what());
-        mc_rtc::log::error("Returning zero action as fallback");
-        return Eigen::VectorXd::Zero(outputSize_);
-      }
-    }
-  }
-  
-  // Fallback: return zero action
-  mc_rtc::log::warning("Using fallback zero action (no valid policy loaded)");
-  return Eigen::VectorXd::Zero(outputSize_);
+  // loadPolicy() only accepts .onnx files
+  return runOnnxInference(observation);
 }
 
 Eigen::VectorXd RLPolicyInterface::runOnnxInference(const Eigen::VectorXd & observation)

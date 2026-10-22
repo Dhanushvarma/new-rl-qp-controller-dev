@@ -2,7 +2,7 @@
  *
  * Reads a golden CSV of mjlab's scripts/hrp5p/export_deploy.py (one row per policy step, with the observation `obs_*`
  * and the policy's raw output `action_*`), runs the ONNX policy on each observation and prints the largest difference
- * to mjlab's action; fails above 1e-4 (the policy runs in float32).
+ * to mjlab's action; fails above 1e-4 (the policy runs in float32), or if a wrong-size observation does not throw.
  *
  * Usage: test_tracking_policy <golden.csv> <policy.onnx>
  */
@@ -86,7 +86,19 @@ int main(int argc, char ** argv)
     }
     ++rows;
   }
-  const bool ok = rows > 0 && worst < 1e-4;
-  std::cout << "action: max |difference| " << worst << "\n" << rows << " rows: " << (ok ? "PASS" : "FAIL") << "\n";
+  // A failed inference throws rather than answering zeros (a jump to q0): the controller disarms on it
+  bool throws = false;
+  try
+  {
+    policy.predict(Eigen::VectorXd::Zero(policy.getObservationSize() + 1));
+  }
+  catch(const std::runtime_error &)
+  {
+    throws = true;
+  }
+  const bool ok = rows > 0 && worst < 1e-4 && throws;
+  std::cout << "action: max |difference| " << worst << "\n"
+            << "wrong observation size: " << (throws ? "throws" : "does not throw") << "\n"
+            << rows << " rows: " << (ok ? "PASS" : "FAIL") << "\n";
   return ok ? 0 : 1;
 }

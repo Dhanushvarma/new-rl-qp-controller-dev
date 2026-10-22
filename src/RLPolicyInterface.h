@@ -31,6 +31,9 @@ public:
    * @brief Run inference on the policy
    * @param observation Input observation vector
    * @return Action vector
+   * @throws std::runtime_error if the policy cannot answer (not loaded, wrong
+   * observation size, ONNX Runtime error). There is no substitute action: the
+   * caller holds the last target and disarms.
    */
   Eigen::VectorXd predict(const Eigen::VectorXd & observation);
   

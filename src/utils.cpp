@@ -78,7 +78,22 @@ void utils::run_rl_state(mc_control::fsm::Controller & ctl_)
     if(newInference)
     {
       ctl.currentObservation = getCurrentObservation(ctl);
-      ctl.currentAction = ctl.rlPolicy->predict(ctl.currentObservation);
+      try
+      {
+        ctl.currentAction = ctl.rlPolicy->predict(ctl.currentObservation);
+      }
+      catch(const std::exception & e)
+      {
+        // No substitute action (zeros were a jump to q0 for a position policy):
+        // disarm, so the posture target stays at the last command (the state
+        // writes nothing once disarmed), and say it once -- nothing runs the
+        // policy again until the operator re-arms.
+        ctl.policyArmed_ = false;
+        mc_rtc::log::error("[NewRLQPController::utils] policy inference failed ({}): policy DISARMED, holding the "
+                           "last target",
+                           e.what());
+        return;
+      }
 
       // Raw policy output -> velocity feedforward, needed by both contracts
       // below (also feeds the "actions"/last_action observation term).
