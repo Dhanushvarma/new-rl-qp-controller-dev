@@ -586,8 +586,9 @@ policies:
     fall_disarm_tilt: 0.5
     tracking:
       # Motion selected at load (a CSV of the motions directory, one row per
-      # 20 ms frame); the GUI selects another one while disarmed.
-      motion: motion_bwc_v2_seed010.csv
+      # 20 ms frame); the GUI selects another one while disarmed. The 10 s
+      # stand, so arming without picking a motion never starts a long one.
+      motion: motion_stand_seed104_10s.csv
       # Default: the installed share/NewRLQPController/motions. Set it to the
       # source folder (<repo>/motions) to use new CSVs without reinstalling.
       # motions_dir: /path/to/new-rl-qp-controller/motions
