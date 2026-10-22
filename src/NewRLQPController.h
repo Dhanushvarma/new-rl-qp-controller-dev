@@ -770,6 +770,10 @@ struct NewRLQPController_DLLAPI NewRLQPController : public mc_control::fsm::Cont
   /// Auto-disarm above this measured joint velocity (rad/s), 0 = off. A runaway
   /// reaches saturation in ~400 ms, faster than an operator can react.
   double runawayDisarmVel_ = 0.0;
+  /// Largest measured joint speed this tick (rad/s) and its index in jointNames
+  /// (-1 if none), refreshed every tick for the runaway guard and the logs.
+  double maxJointVel_ = 0.0;
+  int maxJointVelIndex_ = -1;
 
   /** @brief ONNX runtime wrapper for running policy inference. */
   std::unique_ptr<RLPolicyInterface> rlPolicy;

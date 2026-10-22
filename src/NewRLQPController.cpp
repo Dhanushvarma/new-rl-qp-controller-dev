@@ -166,21 +166,26 @@ bool NewRLQPController::run()
   // Runaway guard. The feedforward/servo instability grows ~1.38 per tick and
   // saturates in under 400 ms, so no operator can catch it; disarm on the
   // measured velocity, which is the quantity that actually breaks the hardware.
-  if(policyArmed_ && runawayDisarmVel_ > 0.0)
+  // Disarming freezes the posture target at the last command (see below).
   {
     const auto & rr = realRobot(robots()[0].name());
-    double vmax = 0.0;
+    maxJointVel_ = 0.0;
+    maxJointVelIndex_ = -1;
     for(int i = 0; i < nbActuatedJoints; ++i)
     {
       const int k = rr.jointIndexByName(jointNames[i]);
-      if(!rr.mbc().alpha[k].empty()) { vmax = std::max(vmax, std::abs(rr.mbc().alpha[k][0])); }
+      if(!rr.mbc().alpha[k].empty() && std::abs(rr.mbc().alpha[k][0]) > maxJointVel_)
+      {
+        maxJointVel_ = std::abs(rr.mbc().alpha[k][0]);
+        maxJointVelIndex_ = i;
+      }
     }
-    if(vmax > runawayDisarmVel_)
-    {
-      policyArmed_ = false;
-      mc_rtc::log::error("[NewRLQPController] RUNAWAY: |alpha| {:.2f} > {:.2f} rad/s, policy DISARMED",
-                         vmax, runawayDisarmVel_);
-    }
+  }
+  if(policyArmed_ && runawayDisarmVel_ > 0.0 && maxJointVel_ > runawayDisarmVel_)
+  {
+    policyArmed_ = false;
+    mc_rtc::log::error("[NewRLQPController] RUNAWAY: |alpha| {:.2f} rad/s on {} > {:.2f} rad/s, policy DISARMED",
+                       maxJointVel_, jointNames[maxJointVelIndex_], runawayDisarmVel_);
   }
 
   // Disarmed: q_rl follows the posture target the PostureTask holds (frozen at
@@ -1632,6 +1637,12 @@ void NewRLQPController::addLog()
   logger().addLogEntry("NewRLQPController_zeroVelRef",       [this]() { return zeroVelRef_; });
   logger().addLogEntry("NewRLQPController_reseedQRl",        [this]() { return reseedQRl(); });
   logger().addLogEntry("NewRLQPController_velCmd",           [this]() { return currentVelCmd_; });
+  logger().addLogEntry("NewRLQPController_armed",            [this]() { return policyArmed_; });
+  // Largest measured joint speed over the actuated joints and its joint (index
+  // in jointNames, -1 if none), what the runaway guard compares against
+  // runaway_disarm_vel.
+  logger().addLogEntry("NewRLQPController_maxJointVel",      [this]() { return maxJointVel_; });
+  logger().addLogEntry("NewRLQPController_maxJointVelIndex", [this]() { return maxJointVelIndex_; });
 
   if(logImpactVel_)
   {
