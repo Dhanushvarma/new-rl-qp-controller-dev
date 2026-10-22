@@ -1773,6 +1773,13 @@ void NewRLQPController::addLog()
   });
 }
 
+bool NewRLQPController::refusedWhileArmed(const std::string & what) const
+{
+  if(!policyArmed_) return false;
+  mc_rtc::log::error("[NewRLQPController] {} refused while ARMED: HOLD first", what);
+  return true;
+}
+
 void NewRLQPController::addGui()
 {
   gui()->addElement({"NewRLQPController", "Policy"},
@@ -1819,6 +1826,7 @@ void NewRLQPController::addGui()
         return pt ? pt->stiffness() : 0.0;
       },
       [this](double v) {
+        if(refusedWhileArmed("posture stiffness change")) return;
         postureStiffnessOverride_ = v;
         auto pt = getPostureTask(robot().name());
         if(pt)
@@ -1840,21 +1848,28 @@ void NewRLQPController::addGui()
         return pt ? pt->damping() : 0.0;
       },
       [this](double v) {
+        if(refusedWhileArmed("posture damping change")) return;
         postureDampingOverride_ = v;
         auto pt = getPostureTask(robot().name());
         if(pt) pt->damping(v);
       })
   );
 
+  // Mode changes are refused while ARMED (refusedWhileArmed).
   gui()->addElement({"ControlMode"},
-    mc_rtc::gui::Button("Toggle QP Control",       [this]() { useQP_ = !useQP_; }),
+    mc_rtc::gui::Button("Toggle QP Control",       [this]() {
+      if(refusedWhileArmed("QP toggle")) return;
+      useQP_ = !useQP_;
+    }),
     mc_rtc::gui::Button("Toggle posture pass-through", [this]() {
+      if(refusedWhileArmed("posture pass-through toggle")) return;
       posturePassthrough_ = !posturePassthrough_;
       applyPostureMode();
       mc_rtc::log::warning("[NewRLQPController] posture {}",
                            posturePassthrough_ ? "PASS-THROUGH" : "2nd-order task");
     }),
     mc_rtc::gui::Button("Toggle posture feedforward", [this]() {
+      if(refusedWhileArmed("posture feedforward toggle")) return;
       postureFeedforward_ = !postureFeedforward_;
       ffInit_ = false;
       applyPostureMode();
@@ -1871,6 +1886,7 @@ void NewRLQPController::addGui()
     // next tick's (now-skipped) restoreQPVelocity() call, so the QP's state
     // never sits on a stale zero longer than the tick that is already in flight.
     mc_rtc::gui::Button("Toggle QP zero-vel-out", [this]() {
+      if(refusedWhileArmed("QP zero-vel-out toggle")) return;
       qpZeroVelOut_ = !qpZeroVelOut_;
       if(!qpZeroVelOut_) { restoreQPVelocity(); }
       mc_rtc::log::warning("[NewRLQPController] QP velocity output to mc_mujoco: {}",
@@ -1881,6 +1897,7 @@ void NewRLQPController::addGui()
     // written would stay latched in the task for as long as the policy is
     // armed. Left alone under feedforward, whose own refVel write owns it.
     mc_rtc::gui::Button("Toggle posture refVel", [this]() {
+      if(refusedWhileArmed("posture refVel toggle")) return;
       postureRefVel_ = !postureRefVel_;
       if(!postureRefVel_ && !postureFeedforward_)
       {

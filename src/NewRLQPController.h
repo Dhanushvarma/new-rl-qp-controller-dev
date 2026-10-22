@@ -809,6 +809,11 @@ private:
   void addLog();
   /** @brief Register GUI elements visible in RViz and mc_mujoco. */
   void addGui();
+  /** @brief Whether a GUI change of mode or PostureTask gains must be refused
+   *  because the policy is ARMED (logs it). Each takes effect on the robot
+   *  within a tick, so it needs a HOLD first. */
+  bool refusedWhileArmed(const std::string & what) const;
+
 
   /** @brief Abort if no floating-base observer made it into the pipeline. */
   void checkFloatingBaseObserver();
