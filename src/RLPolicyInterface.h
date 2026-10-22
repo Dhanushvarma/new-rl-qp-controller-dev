@@ -52,6 +52,12 @@ public:
    */
   int getActionSize() const { return outputSize_; }
 
+  /**
+   * @brief A custom metadata entry of the ONNX model
+   * @return Its value, empty if the model has no such entry (or is not loaded)
+   */
+  std::string customMetadata(const std::string & key) const;
+
 private:
   int inputSize_;
   int outputSize_;

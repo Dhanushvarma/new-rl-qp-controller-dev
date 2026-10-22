@@ -214,6 +214,25 @@ void RLPolicyInterface::loadPolicy(const std::string & path)
   }
 }
 
+std::string RLPolicyInterface::customMetadata(const std::string & key) const
+{
+  if(!onnxSession_)
+  {
+    return "";
+  }
+  try
+  {
+    Ort::AllocatorWithDefaultOptions allocator;
+    auto value = onnxSession_->GetModelMetadata().LookupCustomMetadataMapAllocated(key.c_str(), allocator);
+    return value ? std::string(value.get()) : std::string();
+  }
+  catch(const std::exception & e)
+  {
+    mc_rtc::log::warning("Cannot read the ONNX metadata {}: {}", key, e.what());
+    return "";
+  }
+}
+
 Eigen::VectorXd RLPolicyInterface::predict(const Eigen::VectorXd & observation)
 {
   if(!isLoaded_)
