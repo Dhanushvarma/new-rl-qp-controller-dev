@@ -551,9 +551,9 @@ bool MotionTracker::start()
   return true;
 }
 
-void MotionTracker::fail(const std::string & why)
+void MotionTracker::fail(const std::string & why, DisarmReason reason)
 {
-  ctl_.policyArmed_ = false;
+  ctl_.disarm(reason);
   mc_rtc::log::error("[Tracking] {}: policy DISARMED", why);
   stop();
 }
@@ -684,6 +684,19 @@ const MotionTracker::BaseState & MotionTracker::observedBase() const
   throw std::runtime_error("unknown base_source");
 }
 
+double MotionTracker::observedTilt() const
+{
+  // The angle between the anchor's z axis and the world's: anchorRot is anchor to world, so its (2, 2) is their dot
+  try
+  {
+    return std::acos(std::clamp(observedBase().anchorRot(2, 2), -1.0, 1.0));
+  }
+  catch(const std::exception &)
+  {
+    return std::numeric_limits<double>::quiet_NaN();
+  }
+}
+
 void MotionTracker::readRobot()
 {
   readBaseSources();
@@ -752,7 +765,7 @@ void MotionTracker::infer()
   }
   catch(const std::exception & e)
   {
-    fail(fmt::format("policy inference failed ({})", e.what()));
+    fail(fmt::format("policy inference failed ({})", e.what()), DisarmReason::Inference);
     return;
   }
   if(action.size() != nAct_ || !action.allFinite())

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "DisarmReason.h"
 #include "TrackingMotion.h"
 #include "TrackingObservation.h"
 
@@ -33,8 +34,8 @@ struct NewRLQPController;
  *   exp(-2 pi cutoff policy_step_size), seeded with the measured joint angles at the first step), clamped to the
  *   joint range and written to q_rl, which the state hands to the PostureTask. The observation's previous action is
  *   the raw network output (zero at the first step). After the last frame the reference holds it (END, logged once).
- * - HOLD (any disarm: GUI, runaway guard, or an error here): nothing writes the posture target any more, so it stays
- *   at the last command; the next ARM starts over from the ramp.
+ * - HOLD (any disarm: GUI, runaway or fall guard, a failed inference, or an error here): nothing writes the posture
+ *   target any more, so it stays at the last command; the next ARM starts over from the ramp.
  *
  * Observation sources: the encoders for the joints, and for the floating base (anchor pose, base linear and angular
  * velocity) the source `tracking.base_source` selects, read in one place (observedBase()):
@@ -108,6 +109,10 @@ struct MotionTracker
   /** The tracking observation of the current frame (obs_format 9) */
   Eigen::VectorXd observation();
 
+  /** Tilt from vertical [rad] of the anchor body in the observed base state (tracking.base_source, as the policy
+   * observes it), as of the last update(); NaN if that source has no reading */
+  double observedTilt() const;
+
   /** Every controller tick, before the FSM: takes finished motion loads, refreshes the GUI. */
   void update();
 
@@ -138,7 +143,7 @@ private:
   };
 
   /** Disarm the controller after an error, with the reason */
-  void fail(const std::string & why);
+  void fail(const std::string & why, DisarmReason reason = DisarmReason::Tracking);
   /** The estimate source: the observer pipeline's floating base and the IMU gyro */
   void readEstimate(BaseState & out);
   /** The ground-truth source: the simulator's free joint; false if the robot has no FloatingBase body sensor */

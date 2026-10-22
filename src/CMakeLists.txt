@@ -20,6 +20,7 @@ set(controller_SRC
 )
 
 set(controller_HDR 
+  DisarmReason.h
   MotionTracker.h
   NewRLQPController.h
   RLPolicyInterface.h

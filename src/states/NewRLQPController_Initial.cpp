@@ -39,7 +39,7 @@ bool NewRLQPController_Initial::run(mc_control::fsm::Controller & ctl_)
     {
       if(!ctl.tracker_.start())
       {
-        ctl.policyArmed_ = false;
+        ctl.disarm(DisarmReason::Tracking);
         return false;
       }
     }

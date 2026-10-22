@@ -571,6 +571,13 @@ policies:
     # Auto-HOLD above this measured joint speed (rad/s); see
     # NewRLQPController_maxJointVel in the logs.
     runaway_disarm_vel: 6.0
+    # Fall guard: auto-HOLD when the torso as the policy observes it (the
+    # anchor body, from base_source) leans more than this from vertical (rad;
+    # 0 turns it off). Every slot gets 0.5 when the key is absent. See
+    # NewRLQPController_torsoTilt and NewRLQPController_disarmReason (3) in the
+    # logs, "Last disarm" in the GUI. To confirm on the robot before relying on
+    # it.
+    fall_disarm_tilt: 0.5
     tracking:
       # Motion selected at load (a CSV of the motions directory, one row per
       # 20 ms frame); the GUI selects another one while disarmed.

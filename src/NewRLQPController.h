@@ -775,6 +775,15 @@ struct NewRLQPController_DLLAPI NewRLQPController : public mc_control::fsm::Cont
   /// (-1 if none), refreshed every tick for the runaway guard and the logs.
   double maxJointVel_ = 0.0;
   int maxJointVelIndex_ = -1;
+  /// Auto-disarm when the torso the policy observes leans more than this from
+  /// vertical (rad), 0 = off; see observedTorsoTilt(). Per policy
+  /// (fall_disarm_tilt), 0.5 when absent. A falling robot passes it in a few
+  /// hundred ms; disarming freezes the posture target instead of letting the
+  /// policy keep driving the joints.
+  double fallDisarmTilt_ = 0.5;
+  /// That tilt this tick (rad), refreshed every tick for the fall guard and the
+  /// logs (NewRLQPController_torsoTilt); NaN without a reading.
+  double torsoTilt_ = 0.0;
 
   /** @brief ONNX runtime wrapper for running policy inference: the current
    *  slot's entry of policies_. */
@@ -812,6 +821,18 @@ struct NewRLQPController_DLLAPI NewRLQPController : public mc_control::fsm::Cont
    */
   bool policyArmed_ = false;
 
+  /** @brief Why the policy was last disarmed (DisarmReason.h), None while
+   *  armed. Logged as NewRLQPController_disarmReason, shown in the GUI. */
+  DisarmReason disarmReason_ = DisarmReason::None;
+
+  /** @brief Disarm (HOLD) for this reason: nothing writes the posture target
+   *  any more, so it stays at the last command. */
+  void disarm(DisarmReason reason) noexcept
+  {
+    policyArmed_ = false;
+    disarmReason_ = reason;
+  }
+
 private:
   mc_rtc::Configuration config_;
 
@@ -836,6 +857,13 @@ private:
 
   /** @brief Abort if no floating-base observer made it into the pipeline. */
   void checkFloatingBaseObserver();
+
+  /** @brief Tilt from vertical (rad) of the torso as the policy observes it,
+   *  the fall guard's input: a tracking slot's anchor body from its
+   *  tracking.base_source (MotionTracker::observedTilt()), otherwise the
+   *  floating base as the observer pipeline estimates it (projected_gravity's
+   *  source). NaN without a reading. */
+  double observedTorsoTilt() const;
 
   /** @brief Load robot parameters (gains, action scale, q0) from config. */
   void initializeRobot();

@@ -190,9 +190,23 @@ bool NewRLQPController::run()
   }
   if(policyArmed_ && runawayDisarmVel_ > 0.0 && maxJointVel_ > runawayDisarmVel_)
   {
-    policyArmed_ = false;
+    disarm(DisarmReason::Runaway);
     mc_rtc::log::error("[NewRLQPController] RUNAWAY: |alpha| {:.2f} rad/s on {} > {:.2f} rad/s, policy DISARMED",
                        maxJointVel_, jointNames[maxJointVelIndex_], runawayDisarmVel_);
+  }
+
+  // Fall guard, on the robot too (the tracker's FALL report reads the
+  // simulator). The tilt of the torso as the policy observes it, after
+  // tracker_.update() has read this tick's base state; past fall_disarm_tilt
+  // the robot is falling, and disarming freezes the posture target at the last
+  // command rather than letting the policy keep driving the joints.
+  torsoTilt_ = observedTorsoTilt();
+  if(policyArmed_ && fallDisarmTilt_ > 0.0 && torsoTilt_ > fallDisarmTilt_)
+  {
+    disarm(DisarmReason::Tilt);
+    mc_rtc::log::error("[NewRLQPController] FALL GUARD: torso tilted {:.2f} rad from vertical > {:.2f} rad "
+                       "(fall_disarm_tilt), policy DISARMED",
+                       torsoTilt_, fallDisarmTilt_);
   }
 
   // Disarmed: q_rl follows the posture target the PostureTask holds (frozen at
@@ -266,6 +280,16 @@ bool NewRLQPController::run()
   if(useQP_ && qpZeroVelOut_) { zeroAlphaOut(); }
 
   return ret;
+}
+
+double NewRLQPController::observedTorsoTilt() const
+{
+  if(tracker_.enabled()) { return tracker_.observedTilt(); }
+  // The base body's z axis against the world's, from the estimated floating
+  // base; the rotation's (2, 2) is the same in both directions
+  const auto & rr = realRobot(robots()[0].name());
+  const double c = rr.bodyPosW(rr.mb().body(0).name()).rotation()(2, 2);
+  return std::acos(std::clamp(c, -1.0, 1.0));
 }
 
 void NewRLQPController::syncQRlToPostureTarget()
@@ -343,6 +367,7 @@ void NewRLQPController::reset(const mc_control::ControllerResetData & reset_data
   // Never resume armed across a reset: a controller switch or a re-reset must
   // put the robot back in the held state and require a deliberate re-arm.
   policyArmed_ = false;
+  disarmReason_ = DisarmReason::None;
   tracker_.stop();
   simServoGainsFile_ = config_("sim_servo_gains", std::string(""));
   simServoGainsPending_ = !simServoGainsFile_.empty();
@@ -547,6 +572,7 @@ void NewRLQPController::initializeRobot()
   postureAccelMax_    = config_("policies")[currentPolicyIndex]("posture_accel_max", 200.0);
   postureFeedforward_ = config_("policies")[currentPolicyIndex]("posture_feedforward", false);
   runawayDisarmVel_   = config_("policies")[currentPolicyIndex]("runaway_disarm_vel", 0.0);
+  fallDisarmTilt_     = config_("policies")[currentPolicyIndex]("fall_disarm_tilt", 0.5);
 
   // Experimental: see restoreQPVelocity()/zeroAlphaOut() and run(). Off by
   // default -- untested on hardware, simulation-only ablation for now.
@@ -1482,6 +1508,7 @@ void NewRLQPController::applyVelCmdReplay()
   if(!policyArmed_ && velCmdReplayArmAfter_ >= 0.0 && velCmdReplayClock_ >= velCmdReplayArmAfter_ && isSimulated())
   {
     policyArmed_ = true;
+    disarmReason_ = DisarmReason::None;
     velCmdReplayArmAfter_ = -1.0;  // once: a later disarm (runaway guard) stays disarmed
     mc_rtc::log::warning("[NewRLQPController] vel_cmd_replay: policy ARMED automatically at {:.2f} s",
                          velCmdReplayClock_);
@@ -1739,6 +1766,11 @@ void NewRLQPController::addLog()
   // runaway_disarm_vel.
   logger().addLogEntry("NewRLQPController_maxJointVel",      [this]() { return maxJointVel_; });
   logger().addLogEntry("NewRLQPController_maxJointVelIndex", [this]() { return maxJointVelIndex_; });
+  // The fall guard's input (rad from vertical) and which guard last disarmed
+  // the policy (DisarmReason.h: 0 none, 1 operator, 2 runaway, 3 tilt, 4
+  // inference, 5 tracking).
+  logger().addLogEntry("NewRLQPController_torsoTilt",        [this]() { return torsoTilt_; });
+  logger().addLogEntry("NewRLQPController_disarmReason",     [this]() { return static_cast<int>(disarmReason_); });
 
   // Tracking_* entries, when a slot tracks motions
   bool tracking = false;
@@ -1896,6 +1928,8 @@ void NewRLQPController::addGui()
   // motion is a stop, not a jump.
   gui()->addElement({"NewRLQPController"},
     mc_rtc::gui::Label("Policy state", [this]() { return policyArmed_ ? "ARMED" : "held (disarmed)"; }),
+    // Which guard (or the operator) disarmed it last
+    mc_rtc::gui::Label("Last disarm", [this]() { return std::string(disarmReasonName(disarmReason_)); }),
     mc_rtc::gui::Button("ARM policy", [this]() {
       if(policyArmed_) return;
       // A tracking slot needs a loaded motion, the QP, ... (empty otherwise)
@@ -1906,11 +1940,12 @@ void NewRLQPController::addGui()
         return;
       }
       policyArmed_ = true;
+      disarmReason_ = DisarmReason::None;
       mc_rtc::log::warning("[NewRLQPController] policy ARMED from the GUI");
     }),
     mc_rtc::gui::Button("HOLD (disarm)", [this]() {
       if(!policyArmed_) return;
-      policyArmed_ = false;
+      disarm(DisarmReason::Operator);
       mc_rtc::log::warning("[NewRLQPController] policy DISARMED -- holding last posture");
     })
   );

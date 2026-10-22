@@ -88,7 +88,7 @@ void utils::run_rl_state(mc_control::fsm::Controller & ctl_)
         // disarm, so the posture target stays at the last command (the state
         // writes nothing once disarmed), and say it once -- nothing runs the
         // policy again until the operator re-arms.
-        ctl.policyArmed_ = false;
+        ctl.disarm(DisarmReason::Inference);
         mc_rtc::log::error("[NewRLQPController::utils] policy inference failed ({}): policy DISARMED, holding the "
                            "last target",
                            e.what());
