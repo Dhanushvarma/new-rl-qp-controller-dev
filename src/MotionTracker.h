@@ -21,8 +21,9 @@ struct NewRLQPController;
  * A tracking slot has `obs_format: 9`, `velocity_action: false` and runs under the QP. What it does:
  *
  * - Motions: CSVs of mjlab's scripts/hrp5p/export_deploy.py (one row per policy step), listed from the motions
- *   directory (`tracking.motions_dir`, default the installed `share/NewRLQPController/motions`). `tracking.motion`
- *   names the one selected at load; the GUI selects another while disarmed. Motions load in a background thread
+ *   directory and its subfolders (`tracking.motions_dir`, default the installed `share/NewRLQPController/motions`),
+ *   each by its path relative to it (e.g. walk/motion_walk_15s.csv). `tracking.motion` names the one selected at
+ *   load; the GUI selects another while disarmed. Motions load in a background thread
  *   and are checked against the policy (frame period, joints, observation size, the ONNX joint order).
  * - ARM: a min-jerk ramp from the held posture target to the motion's first-frame joint angles (`arm_ramp_speed`
  *   rad/s mean, at least 1 s), with the other actuated joints going to q0; then a hold of `arm_settle_time` s; then

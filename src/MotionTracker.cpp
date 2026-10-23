@@ -322,13 +322,16 @@ void MotionTracker::rescan()
     mc_rtc::log::warning("[Tracking] motions directory {} does not exist", motionsDir_);
     return;
   }
-  std::filesystem::directory_iterator it(motionsDir_, ec);
-  for(; !ec && it != std::filesystem::directory_iterator(); it.increment(ec))
+  // Every CSV in the directory and its subfolders, by its path relative to the directory (a motion set's folder,
+  // e.g. walk/motion_walk_15s.csv), which select() and tracking.motion take
+  std::filesystem::recursive_directory_iterator it(motionsDir_, ec);
+  for(; !ec && it != std::filesystem::recursive_directory_iterator(); it.increment(ec))
   {
     std::error_code fileEc;
     if(it->is_regular_file(fileEc) && it->path().extension() == ".csv")
     {
-      motionFiles_.push_back(it->path().filename().string());
+      const std::filesystem::path relative = std::filesystem::relative(it->path(), motionsDir_, fileEc);
+      if(!fileEc && !relative.empty()) { motionFiles_.push_back(relative.generic_string()); }
     }
   }
   std::sort(motionFiles_.begin(), motionFiles_.end());
