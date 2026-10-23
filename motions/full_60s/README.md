@@ -1,5 +1,9 @@
 # full_60s: P6's five 60 s trial motions, whole
 
+> **Stage 1 (walking first, 23 Oct):** this folder's CSVs are out of the repository for now. Their arm poses come from a
+> random-arm generator and twist and roll the wrists oddly. They are kept in
+> `hrp5p_motion_tracking_deployment/motions_not_ready/full_60s/` and come back in a later stage; the rates below still hold.
+
 Made by the BaselineWalkingController generator with random walking segments (forward, backward, sideways, turns, arcs)
 and random arm gestures (swings, reaches, waves). Distances are those of the torso from the motion's start.
 

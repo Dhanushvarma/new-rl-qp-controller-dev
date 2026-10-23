@@ -42,6 +42,9 @@ The safety branch held the four safety commits (`e302aeb` to `c160847`) for revi
 - Motion sets: the motions directory has one folder per set (`clips/`, `full_60s/`, ...), each with a README of what
   its motions do and their failure rates in simulation. The tracker lists the CSVs of the subfolders by their path
   (`clips/motion_stand_seed104_10s.csv`), which `tracking.motion` takes too.
+- Stage 1, walking first: the motions folder keeps only the 10 s stand and the default-arm walks (`walk_default_arms/`,
+  generated with no arm targets); the random-arm sets (odd wrist poses) are out of the repository for now, their READMEs
+  kept as records.
 - Tests: `tests/tracking` compares the observation and the policy output with mjlab golden CSVs (`-DTRACKING_GOLDEN_CSV`).
 
 ## Safety

@@ -46,12 +46,11 @@ In the GUI, under `NewRLQPController`:
    - after the last frame it holds that frame (`Tracking state`: ended).
 4. `HOLD (disarm)` at any time: the posture target freezes at the last command.
 
-For the first trials, run one motion at a time with a hand on the stop, and only motions marked "ready" in their
-folder's README:
+For the first trials (stage 1, walking first), run one motion at a time with a hand on the stop:
 1. `clips/motion_stand_seed104_10s.csv` (stands still);
-2. `walk/motion_walk_15s.csv` (walks straight about 0.7 m, arms still);
-3. `clips/motion_clip_seed104_15s.csv` (raises the arms, turns about 36° in place);
-4. `clips/motion_clip_seed084_31s.csv` (steps back, turns about 165° with steps).
+2. `walk_default_arms/motion_walk_default_arms_15s.csv` (walks straight about 0.8 m, arms in their default pose);
+3. `walk_default_arms/motion_walk_default_arms_stops_30s.csv` (two short walks with a stop);
+4. `walk_default_arms/motion_walk_default_arms_stops_45s.csv`, then `..._stops_60s.csv` (three and four short walks).
 
 [motions/README.md](motions/README.md) lists the motion sets, how their failure rates are measured, and how to add one.
 

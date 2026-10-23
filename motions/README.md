@@ -7,14 +7,19 @@ each motion does and how often the policies fell on it in simulation.
 - `tracking.motion` takes the same path.
 - `motions_dir` in a slot's `tracking` section can point at this folder to use new files without reinstalling.
 
-| Folder | Set |
-|---|---|
-| [clips/](clips/README.md) | cut from the 60 s trial motions, each ending standing: a 10 s stand, an 18 s and a 35 s clip |
-| [full_60s/](full_60s/README.md) | P6's five 60 s trial motions, whole |
-| [walk/](walk/README.md) | straight walks at 0.15 m/s, arms still |
-| [walk_default_arms/](walk_default_arms/README.md) | straight walks at 0.15 m/s, arms kept in their default pose (no arm targets of ours), continuous or stop and go |
-| [walk_swing/](walk_swing/README.md) | straight walks at 0.15 m/s with gentle arm swings while walking |
-| [walk_gesture/](walk_gesture/README.md) | short straight walks with slow arm reaches only while standing |
+**Stage 1, walking first (23 Oct).** The repository holds only the 10 s stand and the default-arm walks. The other sets
+move the arms through random poses that twist and roll the wrists oddly; their CSVs are kept in
+`hrp5p_motion_tracking_deployment/motions_not_ready/` and come back in later stages (arm swing, then gestures). Their
+READMEs stay here as the record of their rates.
+
+| Folder | Set | In the repository now |
+|---|---|---|
+| [walk_default_arms/](walk_default_arms/README.md) | straight walks at 0.15 m/s, arms kept in their default pose (no arm targets of ours), continuous or stop and go | 15 s; stop-and-go 30, 45, 60 s |
+| [clips/](clips/README.md) | cut from the 60 s trial motions, each ending standing: a 10 s stand, an 18 s and a 35 s clip | the 10 s stand |
+| [walk/](walk/README.md) | straight walks at 0.15 m/s, arms still in a raised "ready" pose | none (stage 1) |
+| [walk_swing/](walk_swing/README.md) | straight walks at 0.15 m/s with arm swings while walking | none (stage 1) |
+| [walk_gesture/](walk_gesture/README.md) | short straight walks with arm reaches only while standing | none (stage 1) |
+| [full_60s/](full_60s/README.md) | P6's five 60 s trial motions, whole | none (stage 1) |
 
 ## Failure rates
 
@@ -27,9 +32,8 @@ Each folder's README gives, per motion and policy:
 - **mc_mujoco:** this controller in mc_mujoco, at the 5 ms tick with the robot's servo gains. One run with the MCWaiko
   estimate (est) and one with the simulator's true base (gt).
 
-**Robot column.** "ready" means the policy in slot 3 had 0 falls in both. Only ready motions are in the repository
-(one exception by decision, `walk/motion_walk_30s.csv`: 1 fall in 64, see its README);
-the others stay listed in their folder's README with their rates, and their CSVs are kept outside it (in
+**Robot column.** "ready" means the policy in slot 3 had 0 falls in both. Only ready motions of the current stage are in
+the repository; the others stay listed in their folder's README with their rates, and their CSVs are kept outside it (in
 `hrp5p_motion_tracking_deployment/motions_not_ready/`), so the GUI never offers one.
 
 **Policies.**

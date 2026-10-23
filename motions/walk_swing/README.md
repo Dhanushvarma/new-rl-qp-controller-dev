@@ -1,5 +1,9 @@
 # walk_swing: straight walks with arm swings while walking
 
+> **Stage 1 (walking first, 23 Oct):** this folder's CSVs are out of the repository for now. Their arm poses come from a
+> random-arm generator and twist and roll the wrists oddly. They are kept in
+> `hrp5p_motion_tracking_deployment/motions_not_ready/walk_swing/` and come back in a later stage; the rates below still hold.
+
 Made for deployment with the BaselineWalkingController generator (private `Dhanushvarma/hrp5p_mc_rtc_motions`, branch
 `topic/deploy-motion-sets`, configs `motions/walk_swing_<d>s.yaml`). Each stands 3 s while both arms move once to a ready
 posture, walks straight ahead at 0.15 m/s, stops, and stands for the last 2 s. While the feet step, both arms swing

@@ -1,5 +1,9 @@
 # clips: short clips that end standing
 
+> **Stage 1 (walking first, 23 Oct):** only the 10 s stand stays in the repository. The 15 and 31 s clips come from a
+> random-arm generator (odd wrist poses) and are kept in `hrp5p_motion_tracking_deployment/motions_not_ready/clips/` for a
+> later stage; the rates below still hold.
+
 Cut from P6's 60 s trial motions (made by the BaselineWalkingController generator, with random arm gestures, steps
 and turns) where the reference stands still. Each clip holds its last frame for 3 s with zero velocities. Distances
 are those of the torso from the motion's start.
