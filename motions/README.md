@@ -9,8 +9,9 @@ each motion does and how often the policies fell on it in simulation.
 
 | Folder | Set |
 |---|---|
-| [clips/](clips/README.md) | cut from the 60 s trial motions, each ending standing: a 10 s stand, then 18, 35 and 46 s clips |
+| [clips/](clips/README.md) | cut from the 60 s trial motions, each ending standing: a 10 s stand, an 18 s and a 35 s clip |
 | [full_60s/](full_60s/README.md) | P6's five 60 s trial motions, whole |
+| [walk/](walk/README.md) | straight walks at 0.15 m/s, arms still |
 
 ## Failure rates
 
@@ -23,7 +24,9 @@ Each folder's README gives, per motion and policy:
 - **mc_mujoco:** this controller in mc_mujoco, at the 5 ms tick with the robot's servo gains. One run with the MCWaiko
   estimate (est) and one with the simulator's true base (gt).
 
-**Robot column.** "ready" means the policy in slot 3 had 0 falls in both. Run only ready motions on the robot.
+**Robot column.** "ready" means the policy in slot 3 had 0 falls in both. Only ready motions are in the repository;
+the others stay listed in their folder's README with their rates, and their CSVs are kept outside it (in
+`hrp5p_motion_tracking_deployment/motions_not_ready/`), so the GUI never offers one.
 
 **Policies.**
 - Slot 3 runs **P9** (`policy/tracking/P9_18997`): P8 fine-tuned at the robot's 5 ms tick only.

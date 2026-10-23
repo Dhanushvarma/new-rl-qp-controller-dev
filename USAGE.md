@@ -48,9 +48,10 @@ In the GUI, under `NewRLQPController`:
 
 For the first trials, run one motion at a time with a hand on the stop, and only motions marked "ready" in their
 folder's README:
-1. `clips/motion_stand_seed104_10s.csv`;
-2. `clips/motion_clip_seed104_15s.csv`;
-3. `clips/motion_clip_seed084_31s.csv`.
+1. `clips/motion_stand_seed104_10s.csv` (stands still);
+2. `walk/motion_walk_15s.csv` (walks straight about 0.7 m, arms still);
+3. `clips/motion_clip_seed104_15s.csv` (raises the arms, turns about 36° in place);
+4. `clips/motion_clip_seed084_31s.csv` (steps back, turns about 165° with steps).
 
 [motions/README.md](motions/README.md) lists the motion sets, how their failure rates are measured, and how to add one.
 
