@@ -1,0 +1,123 @@
+# Usage: HRP-5P motion tracking
+
+Branch `hrp5p-motion-tracking`: `Leonassim/new-rl-qp-controller` @ `hrp5p`, plus whole-body motion tracking in policy
+slot 3 and safety guards for every slot. What changed: [CHANGELOG.md](CHANGELOG.md).
+
+## Build and install
+
+```bash
+cmake -B build -DCMAKE_INSTALL_PREFIX=<prefix>
+cmake --build build -j
+cmake --install build
+```
+
+- The controller has the same name as the `hrp5p` branch's (`NewRLQPController`). Installing into the same prefix
+  replaces that build, so back it up first or install into another prefix.
+- Installed files:
+  - the controller;
+  - its config, `<prefix>/lib/mc_controller/etc/NewRLQPController.yaml`;
+  - every ONNX of `policy/`, in `<prefix>/share/NewRLQPController/policy/`;
+  - the motions, in `<prefix>/share/NewRLQPController/motions/`.
+
+## Run
+
+- `mc_rtc.yaml`: `MainRobot: HRP5P`, `Enabled: NewRLQPController`.
+- The controller starts disarmed on `default_policy_index` (0).
+- Policies step every 20 ms at a 2 or 5 ms tick. The robot PC runs at 5 ms.
+
+| Slot | Policy | Kind |
+|---|---|---|
+| 0 | `push7.onnx` | velocity (joystick) |
+| 1 | `angmom.onnx` | velocity (joystick) |
+| 2 | `push11.onnx` | velocity (joystick) |
+| 3 | `tracking/P8_17998/policy.onnx` | whole-body motion tracking |
+
+## Track a motion (slot 3)
+
+In the GUI, under `NewRLQPController`:
+
+1. `Policy` → `Policy index (disarm to change)`: 3.
+2. `Tracking` → `Motion (disarm to change)`: pick a motion. The default is the 10 s stand. `Rescan motions directory`
+   finds files added since the start.
+3. `ARM policy`:
+   - the robot ramps to the motion's first frame and settles for 2 s;
+   - it then tracks the motion from where it stands and faces;
+   - after the last frame it holds that frame (`Tracking state`: ended).
+4. `HOLD (disarm)` at any time: the posture target freezes at the last command.
+
+For the first trials, run one motion at a time with a hand on the stop:
+1. `motion_stand_seed104_10s.csv`;
+2. `motion_clip_seed104_15s.csv`;
+3. `motion_clip_seed084_31s.csv`.
+
+[motions/README.md](motions/README.md) lists the motions and explains how to add one.
+
+## Safety guards
+
+Each guard HOLDs the policy: the posture target freezes at the last command. The GUI shows the reason under `Last
+disarm`; the log records it as `NewRLQPController_disarmReason`.
+
+| Reason (log value) | Trigger | Setting (per slot) |
+|---|---|---|
+| Operator (1) | `HOLD (disarm)` | |
+| Runaway (2) | a measured joint speed above the limit | `runaway_disarm_vel` (rad/s, 0 = off) |
+| Tilt (3) | the torso's tilt from vertical, as the policy observes it | `fall_disarm_tilt` (rad, 0 = off, 0.5 if absent) |
+| Inference (4) | a failed policy inference | |
+| Tracking (5) | a tracking error (non-finite observation, QP bypassed, ...) | |
+
+While the policy is armed, the GUI also refuses:
+- policy and motion switches;
+- the QP and posture mode toggles;
+- the PostureTask gain inputs.
+
+## Settings
+
+Where to change them:
+- **Source file:** edit `etc/NewRLQPController.in.yaml`, then reinstall.
+- **Installed file:** edit `NewRLQPController.yaml` directly.
+- **User override** (`~/.config/mc_rtc/controllers/NewRLQPController.yaml`): it merges maps but replaces lists, so use
+  it for top-level keys only. `policy_path` and `policies` are lists.
+
+| Key | Where | Purpose |
+|---|---|---|
+| `verbose_log` | top level | `false`: lean log. `true`: adds the observation, constants and joint copies (about twice the volume). Use `true` for the first robot trials. |
+| `default_policy_index` | top level | slot selected at start |
+| `policy_path` | top level | one ONNX per slot; slot 3 is the tracking policy |
+| `tracking.motion` | slot 3 | motion selected at start |
+| `tracking.motions_dir` | slot 3 | defaults to the installed motions; point it at the repository's `motions/` to skip reinstalling |
+| `tracking.base_source` | slot 3 | `estimate` (robot) or `ground_truth` (simulator only) |
+| `tracking.arm_ramp_speed`, `tracking.arm_settle_time` | slot 3 | arming ramp speed (rad/s) and settle time (s) |
+| `fall_disarm_tilt`, `runaway_disarm_vel` | each slot | the guards above |
+| `sim_servo_gains` | top level | simulator only: a servo gains file for mc_mujoco's PD; ignored on the robot |
+
+## Swap the tracking policy
+
+1. Export the policy with mjlab's `scripts/hrp5p/export_deploy.py`. It writes `policy.onnx` and `policy.yaml`.
+2. Copy the ONNX to `policy/tracking/<name>/policy.onnx` and point slot 3 of `policy_path` at it.
+3. Check slot 3 against the export's `policy.yaml`: `action_scale`, `q0`, `kp`, `kd`, `ref_joint_order` and the
+   `tracking` section. P8 and P6 final share these values.
+4. Rebuild and install.
+
+## Logs
+
+| Entry | Content |
+|---|---|
+| `Tracking_state` | 0 idle, 1 ramping, 2 settling, 3 tracking, 4 ended |
+| `Tracking_motion`, `Tracking_motionTime`, `Tracking_frame` | the motion and the position in it |
+| `Tracking_anchorPos`, `Tracking_anchorQuat` | the torso as observed |
+| `Tracking_refAnchorPos`, `Tracking_refAnchorQuat` | the torso in the reference |
+| `Tracking_est*`, `Tracking_gt*` | estimated and ground-truth (simulator) base, every tick |
+| `Tracking_action`, `Tracking_target` | the raw policy output and the filtered joint target |
+| `NewRLQPController_armed`, `_disarmReason`, `_torsoTilt`, `_maxJointVel`, `_maxJointVelIndex` | guard state |
+
+## Tests
+
+```bash
+cmake -B build -DBUILD_TESTING=ON -DTRACKING_GOLDEN_CSV=<golden.csv> -DTRACKING_POLICY_ONNX=<policy.onnx>
+cmake --build build -j && ctest --test-dir build
+```
+
+- `export_deploy.py` writes the golden CSV next to the policy it was made from. The CSV is about 19 MB and is not in
+  the repository.
+- The tests rebuild the observation and the action from the golden CSV.
+- If an older install is on `LD_LIBRARY_PATH`, put `build/src` first. Otherwise the tests load the installed library.
