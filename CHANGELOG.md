@@ -36,6 +36,9 @@ The safety branch held the four safety commits (`e302aeb` to `c160847`) for revi
   `policy/` tree.
 - `6cb7d2f`: P8 runs in slot 3. It is P6 final fine-tuned through mjlab's model of this posture chain.
 - `17633ec`: slot 3's default motion is the 10 s stand.
+- Motion sets: the motions directory has one folder per set (`clips/`, `full_60s/`, ...), each with a README of what
+  its motions do and their failure rates in simulation. The tracker lists the CSVs of the subfolders by their path
+  (`clips/motion_stand_seed104_10s.csv`), which `tracking.motion` takes too.
 - Tests: `tests/tracking` compares the observation and the policy output with mjlab golden CSVs (`-DTRACKING_GOLDEN_CSV`).
 
 ## Safety

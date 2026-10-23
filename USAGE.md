@@ -37,20 +37,22 @@ cmake --install build
 In the GUI, under `NewRLQPController`:
 
 1. `Policy` → `Policy index (disarm to change)`: 3.
-2. `Tracking` → `Motion (disarm to change)`: pick a motion. The default is the 10 s stand. `Rescan motions directory`
-   finds files added since the start.
+2. `Tracking` → `Motion (disarm to change)`: pick a motion, listed by set folder (e.g.
+   `clips/motion_stand_seed104_10s.csv`). The default is the 10 s stand. `Rescan motions directory` finds files added
+   since the start.
 3. `ARM policy`:
    - the robot ramps to the motion's first frame and settles for 2 s;
    - it then tracks the motion from where it stands and faces;
    - after the last frame it holds that frame (`Tracking state`: ended).
 4. `HOLD (disarm)` at any time: the posture target freezes at the last command.
 
-For the first trials, run one motion at a time with a hand on the stop:
-1. `motion_stand_seed104_10s.csv`;
-2. `motion_clip_seed104_15s.csv`;
-3. `motion_clip_seed084_31s.csv`.
+For the first trials, run one motion at a time with a hand on the stop, and only motions marked "ready" in their
+folder's README:
+1. `clips/motion_stand_seed104_10s.csv`;
+2. `clips/motion_clip_seed104_15s.csv`;
+3. `clips/motion_clip_seed084_31s.csv`.
 
-[motions/README.md](motions/README.md) lists the motions and explains how to add one.
+[motions/README.md](motions/README.md) lists the motion sets, how their failure rates are measured, and how to add one.
 
 ## Safety guards
 
@@ -83,7 +85,7 @@ Where to change them:
 | `verbose_log` | top level | `false`: lean log. `true`: adds the observation, constants and joint copies (about twice the volume). Use `true` for the first robot trials. |
 | `default_policy_index` | top level | slot selected at start |
 | `policy_path` | top level | one ONNX per slot; slot 3 is the tracking policy |
-| `tracking.motion` | slot 3 | motion selected at start |
+| `tracking.motion` | slot 3 | motion selected at start, by its path in the motions folder (e.g. `clips/motion_stand_seed104_10s.csv`) |
 | `tracking.motions_dir` | slot 3 | defaults to the installed motions; point it at the repository's `motions/` to skip reinstalling |
 | `tracking.base_source` | slot 3 | `estimate` (robot) or `ground_truth` (simulator only) |
 | `tracking.arm_ramp_speed`, `tracking.arm_settle_time` | slot 3 | arming ramp speed (rad/s) and settle time (s) |
