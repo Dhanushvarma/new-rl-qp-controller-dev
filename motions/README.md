@@ -12,6 +12,8 @@ each motion does and how often the policies fell on it in simulation.
 | [clips/](clips/README.md) | cut from the 60 s trial motions, each ending standing: a 10 s stand, an 18 s and a 35 s clip |
 | [full_60s/](full_60s/README.md) | P6's five 60 s trial motions, whole |
 | [walk/](walk/README.md) | straight walks at 0.15 m/s, arms still |
+| [walk_swing/](walk_swing/README.md) | straight walks at 0.15 m/s with gentle arm swings while walking |
+| [walk_gesture/](walk_gesture/README.md) | short straight walks with slow arm reaches only while standing |
 
 ## Failure rates
 
