@@ -24,7 +24,8 @@ Each folder's README gives, per motion and policy:
 - **mc_mujoco:** this controller in mc_mujoco, at the 5 ms tick with the robot's servo gains. One run with the MCWaiko
   estimate (est) and one with the simulator's true base (gt).
 
-**Robot column.** "ready" means the policy in slot 3 had 0 falls in both. Only ready motions are in the repository;
+**Robot column.** "ready" means the policy in slot 3 had 0 falls in both. Only ready motions are in the repository
+(one exception by decision, `walk/motion_walk_30s.csv`: 1 fall in 64, see its README);
 the others stay listed in their folder's README with their rates, and their CSVs are kept outside it (in
 `hrp5p_motion_tracking_deployment/motions_not_ready/`), so the GUI never offers one.
 
