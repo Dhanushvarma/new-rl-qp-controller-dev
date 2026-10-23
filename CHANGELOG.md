@@ -35,6 +35,9 @@ The safety branch held the four safety commits (`e302aeb` to `c160847`) for revi
 - `71185f9`: P6 final in slot 3. It stays in the repository as the tests' golden policy. CMake installs the whole
   `policy/` tree.
 - `6cb7d2f`: P8 runs in slot 3. It is P6 final fine-tuned through mjlab's model of this posture chain.
+- P9 replaces P8 in slot 3: P8 fine-tuned 1000 more iterations at the robot's 5 ms tick only. Over whole 59 s motions
+  in mjlab at 5 ms, 4 of 128 robots fall on the held-out motions (P8: 41) and 91 of 512 on the training ones (P8: 148);
+  its legs move a little more (15-30 % more jerk in mc_mujoco). P8's file stays in `policy/tracking/P8_17998/`.
 - `17633ec`: slot 3's default motion is the 10 s stand.
 - Motion sets: the motions directory has one folder per set (`clips/`, `full_60s/`, ...), each with a README of what
   its motions do and their failure rates in simulation. The tracker lists the CSVs of the subfolders by their path

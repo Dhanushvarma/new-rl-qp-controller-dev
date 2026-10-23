@@ -26,8 +26,8 @@ Each folder's README gives, per motion and policy:
 **Robot column.** "ready" means the policy in slot 3 had 0 falls in both. Run only ready motions on the robot.
 
 **Policies.**
-- Slot 3 runs **P8** (`policy/tracking/P8_17998`).
-- **P9** (P8 fine-tuned at the 5 ms tick only, checkpoint 18997) is the candidate to replace it.
+- Slot 3 runs **P9** (`policy/tracking/P9_18997`): P8 fine-tuned at the robot's 5 ms tick only.
+- **P8** (`policy/tracking/P8_17998`) ran in slot 3 before; its rates are kept for comparison.
 
 ## Format
 

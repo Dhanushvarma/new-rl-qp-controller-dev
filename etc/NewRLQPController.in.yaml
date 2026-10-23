@@ -118,12 +118,13 @@ policy_path: [
   # action_scale que push7 (metadonnees de l'onnx et bloc actions du env.yaml
   # identiques), meme chaine iob / PostureTask a l'entrainement.
   "@RL_POLICY_INSTALL_PREFIX@/push11.onnx",
-  # index 3: P8, whole-body motion tracking (see its slot below). P6 final's
-  # file stays in tracking/P6_final/ (the tracking tests' golden policy).
-  "@RL_POLICY_INSTALL_PREFIX@/tracking/P8_17998/policy.onnx",
+  # index 3: P9, whole-body motion tracking (see its slot below). P8's file
+  # stays in tracking/P8_17998/ (the previous slot 3), P6 final's in
+  # tracking/P6_final/ (the tracking tests' golden policy).
+  "@RL_POLICY_INSTALL_PREFIX@/tracking/P9_18997/policy.onnx",
 ]
 # Exige MainRobot: HRP5P dans mc_rtc.yaml (module mc_hrp5_p).
-# 3 = the motion tracking slot (P8): select it from the GUI while
+# 3 = the motion tracking slot (P9): select it from the GUI while
 # disarmed, or set it here.
 default_policy_index: 0
 
@@ -537,17 +538,19 @@ policies:
   # index 2 : push11 -- memes reglages que push7 (index 0).
   - *hrp5p_push_family
 
-  # index 3: P8, whole-body motion tracking (mjlab BeyondMimic-style): P6 final
-  # fine-tuned 1000 iterations through mjlab's model of this posture chain
-  # (PostureTask, kinematic QP with the joint-limit damper, the robot's servos),
-  # with the tick drawn from 2 or 5 ms, a 0-10 ms command delay and the servo
-  # gains randomized. Checkpoint mjlab_link_tracking hrp5p_tracking
-  # 2026-10-22_19-19-11_P8_posture_dr_ft_from_P6/model_17998.pt, task
-  # Mjlab-Tracking-Flat-HRP5P-Posture2or5ms-Delay0to10ms-ServoGains-MultiMotion-
+  # index 3: P9, whole-body motion tracking (mjlab BeyondMimic-style): P8 (P6
+  # final fine-tuned 1000 iterations through mjlab's model of this posture
+  # chain: PostureTask, kinematic QP with the joint-limit damper, the robot's
+  # servos; tick 2 or 5 ms, 0-10 ms command delay, servo gains randomized)
+  # fine-tuned 1000 more iterations at the robot's 5 ms tick only. Checkpoint
+  # mjlab_link_tracking hrp5p_tracking
+  # 2026-10-23_06-31-48_P9_posture5ms_ft_from_P8/model_18997.pt, task
+  # Mjlab-Tracking-Flat-HRP5P-Posture5ms-Delay0to10ms-ServoGains-MultiMotion-
   # WristOri-PathCutoff-JointPos-SwingHeight-JointVel-LegJointPos-FootOri-
   # ActionFilter-StanceSlip. Same observation, action and gains as P6 final.
-  # In that model at the 5 ms tick it does not fall on the 10, 15 and 31 s clips
-  # but still falls on some stretches of long motions: short clips first.
+  # In that model at the 5 ms tick, over whole 59 s motions, 4 of 128 robots
+  # fall on the held-out motions (P8: 41) and 91 of 512 on the training ones
+  # (P8: 148); per-motion rates are in each motions folder's README.
   # MotionTracker (src/MotionTracker.h) runs it: ARM ramps (min-jerk) from the
   # held posture to the selected motion's first frame, settles, then tracks
   # from frame 0; HOLD freezes the posture target at the last command.
@@ -610,8 +613,8 @@ policies:
       # the IMU gyro) or ground_truth (the simulator's free joint, refused on the
       # robot). Both are logged whatever the source (Tracking_est*, Tracking_gt*).
       base_source: estimate
-    # From the P6 package's policy.yaml (export_deploy.py); P8's export has the
-    # same values (checked 23 Oct). q0: the 35 actuated
+    # From the P6 package's policy.yaml (export_deploy.py); P8's and P9's
+    # exports have the same values (checked 23 Oct). q0: the 35 actuated
     # joints (RHDY/LHDY are held at 0); kp/kd only feed logs and the QP bypass
     # here, the PostureTask drives the robot.
     action_scale:

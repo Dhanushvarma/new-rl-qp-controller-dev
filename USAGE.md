@@ -30,7 +30,7 @@ cmake --install build
 | 0 | `push7.onnx` | velocity (joystick) |
 | 1 | `angmom.onnx` | velocity (joystick) |
 | 2 | `push11.onnx` | velocity (joystick) |
-| 3 | `tracking/P8_17998/policy.onnx` | whole-body motion tracking |
+| 3 | `tracking/P9_18997/policy.onnx` | whole-body motion tracking |
 
 ## Track a motion (slot 3)
 
@@ -97,7 +97,7 @@ Where to change them:
 1. Export the policy with mjlab's `scripts/hrp5p/export_deploy.py`. It writes `policy.onnx` and `policy.yaml`.
 2. Copy the ONNX to `policy/tracking/<name>/policy.onnx` and point slot 3 of `policy_path` at it.
 3. Check slot 3 against the export's `policy.yaml`: `action_scale`, `q0`, `kp`, `kd`, `ref_joint_order` and the
-   `tracking` section. P8 and P6 final share these values.
+   `tracking` section. P6 final, P8 and P9 share these values.
 4. Rebuild and install.
 
 ## Logs

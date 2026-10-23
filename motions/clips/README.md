@@ -15,7 +15,7 @@ are those of the torso from the motion's start.
 
 Method: [../README.md](../README.md#failure-rates). Measured on 23 Oct 2026.
 
-| Motion | mjlab P8 | mjlab P9 | mc_mujoco P8 (est, gt) | mc_mujoco P9 (est, gt) | Robot (P8 in slot 3) |
+| Motion | mjlab P8 | mjlab P9 | mc_mujoco P8 (est, gt) | mc_mujoco P9 (est, gt) | Robot (P9 in slot 3) |
 |---|---|---|---|---|---|
 | stand 10 s | 0 / 64 | 0 / 64 | no fall, no fall | no fall, no fall | ready |
 | 15 s clip | 0 / 64 | 0 / 64 | no fall, no fall | no fall, no fall | ready |

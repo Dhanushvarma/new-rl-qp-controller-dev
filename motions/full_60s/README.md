@@ -15,7 +15,7 @@ and random arm gestures (swings, reaches, waves). Distances are those of the tor
 
 Method: [../README.md](../README.md#failure-rates).
 
-| Motion | mjlab P8 | mjlab P9 | mc_mujoco | Robot (P8 in slot 3) |
+| Motion | mjlab P8 | mjlab P9 | mc_mujoco | Robot (P9 in slot 3) |
 |---|---|---|---|---|
 | seed010 | 2 falls | being measured | not run | not yet |
 | seed060 | 4 falls | being measured | not run | not yet |
