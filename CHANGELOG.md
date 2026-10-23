@@ -12,7 +12,7 @@
 
 The safety branch held the four safety commits (`e302aeb` to `c160847`) for review.
 - On 23 Oct they were fast-forwarded into `hrp5p-motion-tracking`.
-- It has nothing the main branch lacks and is two commits behind it.
+- It has nothing the main branch lacks.
 
 ## Motion tracking (new, policy slot 3)
 
