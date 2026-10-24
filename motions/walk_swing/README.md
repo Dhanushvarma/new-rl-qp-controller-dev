@@ -19,19 +19,20 @@ hands do not move. Hand speed at most 0.39 m/s; heading within 1.7°, sideways d
 
 ## Failure rates
 
-Method: [../README.md](../README.md#failure-rates). P8 and P9 measured on 23 Oct 2026, P11 on 24 Oct. mjlab P8 not
-measured.
+Method: [../README.md](../README.md#failure-rates). P8 and P9 measured on 23 Oct 2026, P11 on 24 Oct, P13 on 25 Oct.
+mjlab P8 not measured.
 
-| Motion | mjlab P11 | mjlab P9 | mc_mujoco P11 (est) | mc_mujoco P9 (est, gt) | mc_mujoco P8 (est, gt) | Torso error, P11 / P9 (est) | Robot (P11 in slot 3) |
-|---|---|---|---|---|---|---|---|
-| 15 s | 0 / 64 | 0 / 64 | no fall | no fall, no fall | no fall, no fall | 0.044 / 0.069 m | not in stage 1 |
-| 30 s | 2 / 64 | 0 / 64 | no fall | no fall, no fall | no fall, no fall | 0.120 / 0.133 m | not in stage 1 |
-| 45 s | 1 / 64 | 6 / 64 | no fall | no fall, no fall | no fall, no fall | 0.107 / 0.114 m | not in stage 1 |
-| 60 s | 56 / 64 | 45 / 64 | runaway guard at 46.7 s | runaway guard, runaway guard | no fall, no fall | 0.181 / 0.346 m | not in stage 1 |
+| Motion | mjlab P13 | mjlab P11 / P9 | mc_mujoco P13 (est) | Torso error, P13 / P11 / P9 (est) | Robot (P13 in slot 3) |
+|---|---|---|---|---|---|
+| 15 s | 0 / 64 | 0 / 0 | no fall | 0.030 / 0.044 / 0.069 m | not in stage 1 |
+| 30 s | 0 / 64 | 2 / 0 | no fall | 0.109 / 0.120 / 0.133 m | not in stage 1 |
+| 45 s | 0 / 64 | 1 / 6 | no fall | 0.108 / 0.107 / 0.114 m | not in stage 1 |
+| 60 s | 6 / 64 | 56 / 45 | no fall, no guard trip | 0.130 / 0.181 / 0.346 m | not in stage 1 |
 
-On the 60 s motion the controller's runaway guard disarms the policy and holds the posture: a wrist yaw joint passes
-6 rad/s (P11: right, 6.17 rad/s at 46.7 s; P9: left, 6.04 and 6.16 rad/s). The robot does not fall; the torso error is
-over the tracked part. Found on 24 Oct in the run logs; the 23 Oct table had read these runs as plain "no fall".
+mc_mujoco, earlier slot-3 policies: no fall (P11 est; P9 and P8 est and gt) on all four, but on the 60 s motion the
+controller's runaway guard disarms P11 and P9 and holds the posture: a wrist yaw joint passes 6 rad/s (P11: right,
+6.17 rad/s at 46.7 s; P9: left, 6.04 and 6.16 rad/s); their torso errors are over the tracked part. Found on 24 Oct in
+the run logs; the 23 Oct table had read these runs as plain "no fall". P13 does not trip it.
 
 Left out of the repository (falls in mjlab): the 45 and 60 s motions, kept in
 `hrp5p_motion_tracking_deployment/motions_not_ready/walk_swing/`. As with the plain walks, the falls come with long

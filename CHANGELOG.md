@@ -44,6 +44,11 @@ The safety branch held the four safety commits (`e302aeb` to `c160847`) for revi
   than P9 on long walks with the arms held raised and on the held-out random-arm motions (20 of 128, P9: 4), which stage
   1 does not use. P9's file stays in `policy/tracking/P9_18997/`.
 - `walk_default_arms/` gets back its continuous 30, 45 and 60 s walks, which P11 tracks without a fall.
+- P13 replaces P11 in slot 3: P11 fine-tuned 2000 more iterations on the same motions with adaptive sampling that
+  practises more where robots fall. In mjlab at 5 ms no robot of 64 falls on the stand or any default-arm walk (as
+  P11); over whole motions 31 of 512 fall on the training motions (P11: 93) and 2 of 128 on the held-out ones (P11:
+  20). In mc_mujoco it tracks every stage-1 motion to its end, drifts least with the MCWaiko estimate on the long walks
+  (60 s: 0.09 m, P11 0.22) and trips no guard. P11's file stays in `policy/tracking/P11_19996/`.
 - `17633ec`: slot 3's default motion is the 10 s stand.
 - Motion sets: the motions directory has one folder per set (`clips/`, `full_60s/`, ...), each with a README of what
   its motions do and their failure rates in simulation. The tracker lists the CSVs of the subfolders by their path

@@ -22,18 +22,21 @@ Two kinds:
 
 ## Failure rates
 
-Method: [../README.md](../README.md#failure-rates). P9 measured on 23-24 Oct 2026, P11 on 24 Oct.
+Method: [../README.md](../README.md#failure-rates). P9 measured on 23-24 Oct 2026, P11 on 24 Oct, P13 on 25 Oct.
 
-| Motion | mjlab P11 | mjlab P9 | mc_mujoco P11 (est, gt) | mc_mujoco P9 (est, gt) | Torso error, P11 / P9 (est) | Robot (P11 in slot 3) |
-|---|---|---|---|---|---|---|
-| 15 s | 0 / 64 | 0 / 64 | no fall, no fall | no fall, no fall | 0.041 / 0.062 m | ready |
-| 30 s | 0 / 64 | 1 / 64 | no fall, no fall | no fall, no fall | 0.084 / 0.123 m | ready |
-| 45 s | 0 / 64 | 11 / 64 | no fall, no fall | no fall, no fall | 0.148 / 0.158 m | ready |
-| 60 s | 0 / 64 | 14 / 64 | no fall, no fall | no fall, no fall | 0.216 / 0.184 m | ready |
-| stops 30 s | 0 / 64 | 0 / 64 | no fall, no fall | no fall, no fall | 0.051 / 0.091 m | ready |
-| stops 45 s | 0 / 64 | 0 / 64 | no fall, no fall | no fall, no fall | 0.057 / 0.113 m | ready |
-| stops 60 s | 0 / 64 | 0 / 64 | no fall, no fall | no fall, no fall | 0.060 / 0.135 m | ready |
+| Motion | mjlab P13 | mjlab P11 / P9 | mc_mujoco P13 (est, gt) | Torso error, P13 / P11 / P9 (est) | Robot (P13 in slot 3) |
+|---|---|---|---|---|---|
+| 15 s | 0 / 64 | 0 / 0 | no fall, no fall | 0.039 / 0.041 / 0.062 m | ready |
+| 30 s | 0 / 64 | 0 / 1 | no fall, no fall | 0.066 / 0.084 / 0.123 m | ready |
+| 45 s | 0 / 64 | 0 / 11 | no fall, no fall | 0.082 / 0.148 / 0.158 m | ready |
+| 60 s | 0 / 64 | 0 / 14 | no fall, no fall | 0.093 / 0.216 / 0.184 m | ready |
+| stops 30 s | 0 / 64 | 0 / 0 | no fall, no fall | 0.059 / 0.051 / 0.091 m | ready |
+| stops 45 s | 0 / 64 | 0 / 0 | no fall, no fall | 0.074 / 0.057 / 0.113 m | ready |
+| stops 60 s | 0 / 64 | 0 / 0 | no fall, no fall | 0.089 / 0.060 / 0.135 m | ready |
+
+P11 and P9 had no fall in mc_mujoco (est and gt) on all seven either.
 
 The continuous 30, 45 and 60 s walks were left out while P9 was in slot 3 (1, 11 and 14 of 64 fell in mjlab, after
 long continuous walking). P11, trained with such walks, tracks all seven without a fall, so they are back in the
-repository since 24 Oct. On the robot, start with the 15 s and stop-and-go walks; the continuous ones walk up to 7.6 m.
+repository since 24 Oct; P13 does too, and with the MCWaiko estimate it drifts least on the continuous ones. On the
+robot, start with the 15 s and stop-and-go walks; the continuous ones walk up to 7.6 m.

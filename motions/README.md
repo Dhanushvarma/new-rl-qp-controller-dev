@@ -37,10 +37,11 @@ the repository; the others stay listed in their folder's README with their rates
 `hrp5p_motion_tracking_deployment/motions_not_ready/`), so the GUI never offers one.
 
 **Policies.**
-- Slot 3 runs **P11** (`policy/tracking/P11_19996`): P9 fine-tuned with long straight walks and default-arm walks
-  added to its motions (24 Oct).
-- **P9** (`policy/tracking/P9_18997`, P8 fine-tuned at the robot's 5 ms tick only) and **P8**
-  (`policy/tracking/P8_17998`) ran in slot 3 before; their rates are kept for comparison.
+- Slot 3 runs **P13** (`policy/tracking/P13_21994`, 25 Oct): P11 fine-tuned with adaptive sampling that practises
+  more where robots fall.
+- **P11** (`policy/tracking/P11_19996`, P9 plus long straight walks and default-arm walks), **P9**
+  (`policy/tracking/P9_18997`, P8 at the robot's 5 ms tick) and **P8** (`policy/tracking/P8_17998`) ran in slot 3
+  before; their rates are kept for comparison.
 
 ## Format
 

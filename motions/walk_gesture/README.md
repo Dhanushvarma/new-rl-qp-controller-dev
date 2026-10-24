@@ -19,14 +19,16 @@ hands do not move. Heading within 1.7°, sideways drift within 0.09 m. No turns.
 
 ## Failure rates
 
-Method: [../README.md](../README.md#failure-rates). P8 and P9 measured on 23 Oct 2026, P11 on 24 Oct. mjlab P8 not
-measured.
+Method: [../README.md](../README.md#failure-rates). P8 and P9 measured on 23 Oct 2026, P11 on 24 Oct, P13 on 25 Oct.
+mjlab P8 not measured.
 
-| Motion | mjlab P11 | mjlab P9 | mc_mujoco P11 (est) | mc_mujoco P9 (est, gt) | mc_mujoco P8 (est, gt) | Torso error, P11 / P9 (est) | Robot (P11 in slot 3) |
-|---|---|---|---|---|---|---|---|
-| 15 s | 0 / 64 | 0 / 64 | no fall | no fall, no fall | no fall, no fall | 0.019 / 0.029 m | not in stage 1 |
-| 30 s | 0 / 64 | 0 / 64 | no fall | no fall, no fall | no fall, no fall | 0.114 / 0.091 m | not in stage 1 |
-| 45 s | 0 / 64 | 0 / 64 | no fall | no fall, no fall | no fall, no fall | 0.148 / 0.113 m | not in stage 1 |
-| 60 s | 2 / 64 | 0 / 64 | no fall | no fall, no fall | no fall, no fall | 0.168 / 0.132 m | not in stage 1 |
+| Motion | mjlab P13 | mjlab P11 / P9 | mc_mujoco P13 (est) | Torso error, P13 / P11 / P9 (est) | Robot (P13 in slot 3) |
+|---|---|---|---|---|---|
+| 15 s | 0 / 64 | 0 / 0 | no fall | 0.017 / 0.019 / 0.029 m | not in stage 1 |
+| 30 s | 0 / 64 | 0 / 0 | no fall | 0.076 / 0.114 / 0.091 m | not in stage 1 |
+| 45 s | 0 / 64 | 0 / 0 | no fall | 0.121 / 0.148 / 0.113 m | not in stage 1 |
+| 60 s | 0 / 64 | 2 / 0 | no fall | 0.167 / 0.168 / 0.132 m | not in stage 1 |
 
-The walking comes in short legs with stops, which both handle; P11 had 2 falls in 64 on the 60 s motion.
+mc_mujoco, earlier slot-3 policies: P11 no fall (est); P9 and P8 no fall (est and gt) on all four.
+
+The walking comes in short legs with stops, which they all handle; P11 had 2 falls in 64 on the 60 s motion.

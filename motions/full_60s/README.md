@@ -17,19 +17,19 @@ and random arm gestures (swings, reaches, waves). Distances are those of the tor
 
 ## Failure rates
 
-Method: [../README.md](../README.md#failure-rates). P9 on 23 Oct and P11 on 24 Oct: 320 robots spread over the five
-motions (51 to 82 each), so the counts are falls out of the robots that ran that motion. P8 on 22 Oct: 128 robots over
-the five, about 26 each.
+Method: [../README.md](../README.md#failure-rates). P9 on 23 Oct, P11 on 24 Oct and P13 on 25 Oct: 320 robots spread
+over the five motions (51 to 82 each), so the counts are falls out of the robots that ran that motion. P8 on 22 Oct: 128
+robots over the five, about 26 each.
 
-| Motion | In the repo | mjlab P11 | mjlab P9 | mjlab P8 | mc_mujoco P9 (est, gt) | Robot (P11 in slot 3) |
+| Motion | In the repo | mjlab P13 | mjlab P11 / P9 | mjlab P8 | mc_mujoco P9 (est, gt) | Robot (P13 in slot 3) |
 |---|---|---|---|---|---|---|
-| seed010 | no (stage 1) | 0 / 63 | 0 / 63 | 2 falls | no fall, no fall (torso error 0.105 / 0.110 m) | not in stage 1 |
-| seed060 | no | 1 / 51 | 2 / 51 | 4 falls | not run | not in stage 1 |
-| seed062 | no | 0 / 56 | 2 / 56 | 3 falls | not run | not in stage 1 |
-| seed084 | no | 1 / 82 | 2 / 82 | 1 fall | not run | not in stage 1 |
-| seed104 | no | 0 / 68 | 1 / 68 | 0 falls | not run | not in stage 1 |
+| seed010 | no (stage 1) | 0 / 63 | 0 / 0 | 2 falls | no fall, no fall (torso error 0.105 / 0.110 m) | not in stage 1 |
+| seed060 | no | 1 / 51 | 1 / 2 | 4 falls | not run | not in stage 1 |
+| seed062 | no | 0 / 56 | 0 / 2 | 3 falls | not run | not in stage 1 |
+| seed084 | no | 0 / 82 | 1 / 2 | 1 fall | not run | not in stage 1 |
+| seed104 | no | 0 / 68 | 0 / 1 | 0 falls | not run | not in stage 1 |
 
-mc_mujoco P11 not run on these.
+mc_mujoco P11 and P13 not run on these.
 
 Left out of the repository (falls in mjlab): seeds 060, 062, 084 and 104, kept in
 `hrp5p_motion_tracking_deployment/motions_not_ready/full_60s/`.
