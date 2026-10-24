@@ -8,7 +8,7 @@ still. Heading within 1.6°, sideways drift within 0.09 m. No turns.
 
 Two kinds:
 - **continuous:** one walk, then a stop;
-- **stops:** 6 s legs of walking with 8 s stops between them, which P9 manages at every length.
+- **stops:** 6 s legs of walking with 8 s stops between them, which P9 and P11 manage at every length.
 
 | File | Length | Walk | In the repo |
 |---|---|---|---|
@@ -22,19 +22,18 @@ Two kinds:
 
 ## Failure rates
 
-Method: [../README.md](../README.md#failure-rates). Measured on 23 Oct 2026.
+Method: [../README.md](../README.md#failure-rates). P9 measured on 23-24 Oct 2026, P11 on 24 Oct.
 
-| Motion | mjlab P9 | mc_mujoco P9 (est, gt) | Torso error, P9 (est) | Robot (P9 in slot 3) |
-|---|---|---|---|---|
-| 15 s | 0 / 64 | no fall, no fall | 0.062 m | ready |
-| 30 s | 1 / 64 | no fall, no fall | 0.123 m | not ready |
-| 45 s | 11 / 64 | no fall, no fall | 0.158 m | not ready |
-| 60 s | not measured yet | no fall, no fall | 0.184 m | not ready |
-| stops 30 s | 0 / 64 | no fall, no fall | 0.091 m | ready |
-| stops 45 s | 0 / 64 | no fall, no fall | 0.113 m | ready |
-| stops 60 s | 0 / 64 | no fall, no fall | 0.135 m | ready |
+| Motion | mjlab P11 | mjlab P9 | mc_mujoco P11 (est, gt) | mc_mujoco P9 (est, gt) | Torso error, P11 / P9 (est) | Robot (P11 in slot 3) |
+|---|---|---|---|---|---|---|
+| 15 s | 0 / 64 | 0 / 64 | no fall, no fall | no fall, no fall | 0.041 / 0.062 m | ready |
+| 30 s | 0 / 64 | 1 / 64 | no fall, no fall | no fall, no fall | 0.084 / 0.123 m | ready |
+| 45 s | 0 / 64 | 11 / 64 | no fall, no fall | no fall, no fall | 0.148 / 0.158 m | ready |
+| 60 s | 0 / 64 | 14 / 64 | no fall, no fall | no fall, no fall | 0.216 / 0.184 m | ready |
+| stops 30 s | 0 / 64 | 0 / 64 | no fall, no fall | no fall, no fall | 0.051 / 0.091 m | ready |
+| stops 45 s | 0 / 64 | 0 / 64 | no fall, no fall | no fall, no fall | 0.057 / 0.113 m | ready |
+| stops 60 s | 0 / 64 | 0 / 64 | no fall, no fall | no fall, no fall | 0.060 / 0.135 m | ready |
 
-Left out of the repository: the 30 and 45 s continuous walks (1 and 11 of 64 fell in mjlab) and the 60 s one, whose
-mjlab check was paused (it cannot pass where the 45 s fails); their CSVs are kept in
-`hrp5p_motion_tracking_deployment/motions_not_ready/walk_default_arms/`. As in `walk/`, the falls come with long
-continuous walking; the stop-and-go walks avoid it.
+The continuous 30, 45 and 60 s walks were left out while P9 was in slot 3 (1, 11 and 14 of 64 fell in mjlab, after
+long continuous walking); their CSVs are kept in `hrp5p_motion_tracking_deployment/motions_not_ready/walk_default_arms/`.
+P11, trained with such walks, tracks all seven without a fall.

@@ -18,21 +18,21 @@ stays within 1.6° and sideways drift within 0.13 m; the hands do not move after
 
 ## Failure rates
 
-Method: [../README.md](../README.md#failure-rates). Measured on 23 Oct 2026.
+Method: [../README.md](../README.md#failure-rates). P8 and P9 measured on 23 Oct 2026, P11 on 24 Oct.
 
-| Motion | mjlab P9 | mjlab P8 | mc_mujoco P9 (est, gt) | mc_mujoco P8 (est, gt) | Torso error, P9 (est) | Robot (P9 in slot 3) |
-|---|---|---|---|---|---|---|
-| 15 s | 0 / 64 | 0 / 64 | no fall, no fall | no fall, no fall | 0.071 m | ready |
-| 30 s | 1 / 64 | 20 / 64 | no fall, no fall | no fall, no fall | 0.201 m | in the repo by decision: 1 fall in 64 |
-| 45 s | 35 / 64 | 49 / 64 | no fall, no fall | no fall, no fall | 0.284 m | not ready |
-| 60 s | 56 / 64 | 60 / 64 | no fall, no fall | no fall, no fall | 0.361 m | not ready |
+| Motion | mjlab P11 | mjlab P9 | mjlab P8 | mc_mujoco P11 (est) | mc_mujoco P9 (est, gt) | mc_mujoco P8 (est, gt) | Torso error, P11 / P9 (est) | Robot (P11 in slot 3) |
+|---|---|---|---|---|---|---|---|---|
+| 15 s | 0 / 64 | 0 / 64 | 0 / 64 | no fall | no fall, no fall | no fall, no fall | 0.085 / 0.071 m | not in stage 1 |
+| 30 s | 16 / 64 | 1 / 64 | 20 / 64 | no fall | no fall, no fall | no fall, no fall | 0.188 / 0.201 m | not in stage 1 |
+| 45 s | 56 / 64 | 35 / 64 | 49 / 64 | no fall | no fall, no fall | no fall, no fall | 0.236 / 0.284 m | not in stage 1 |
+| 60 s | 61 / 64 | 56 / 64 | 60 / 64 | no fall | no fall, no fall | no fall, no fall | 0.316 / 0.361 m | not in stage 1 |
 
-Long straight walks are new to P8 and P9 (their training motions walk in 4 to 8 s segments): in mjlab the falls start
-after about 20 s of walking, and the robot falls further behind the reference the longer it walks. P10, trained with
-straight walks added, is meant to fix this.
+Long straight walks with the arms held still in front of the body are hard for all three (their training motions walk
+in 4 to 8 s segments): in mjlab the falls start after about 20 s of walking, mostly as the robot stops at the end of the
+walk, and the robot falls further behind the reference the longer it walks. P11 holds long walks with the arms in their
+default pose (`walk_default_arms/`) but falls more than P9 here.
 
-The 30 s walk is in the repository by decision (23 Oct) although 1 of 64 robots fell, at 28.5 s, just after the feet
-stop: on the robot, be ready to HOLD at the end of the walk.
+The 30 s walk was in the repository by decision (23 Oct, P9: 1 fall in 64, at 28.5 s) until stage 1.
 
 Left out of the repository (falls in mjlab): the 45 and 60 s walks, kept in
 `hrp5p_motion_tracking_deployment/motions_not_ready/walk/`.

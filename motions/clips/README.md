@@ -17,23 +17,23 @@ are those of the torso from the motion's start.
 
 ## Failure rates
 
-Method: [../README.md](../README.md#failure-rates). Measured on 23 Oct 2026.
+Method: [../README.md](../README.md#failure-rates). P8 and P9 measured on 23 Oct 2026, P11 on 24 Oct.
 
-| Motion | In the repo | mjlab P9 | mjlab P8 | mc_mujoco P9 (est, gt) | mc_mujoco P8 (est, gt) | Robot (P9 in slot 3) |
-|---|---|---|---|---|---|---|
-| stand 10 s | yes | 0 / 64 | 0 / 64 | no fall, no fall | no fall, no fall | ready |
-| 15 s clip | yes | 0 / 64 | 0 / 64 | no fall, no fall | no fall, no fall | ready |
-| 31 s clip | yes | 0 / 64 | 0 / 64 | no fall, no fall | no fall, no fall | ready |
-| 42 s clip | no | 3 / 64 | 5 / 64 | no fall (est only) | no fall (est only) | not ready |
+| Motion | In the repo | mjlab P11 | mjlab P9 | mjlab P8 | mc_mujoco P11 (est, gt) | mc_mujoco P9 (est, gt) | mc_mujoco P8 (est, gt) | Robot (P11 in slot 3) |
+|---|---|---|---|---|---|---|---|---|
+| stand 10 s | yes | 0 / 64 | 0 / 64 | 0 / 64 | no fall, no fall | no fall, no fall | no fall, no fall | ready |
+| 15 s clip | no (stage 1) | 0 / 64 | 0 / 64 | 0 / 64 | no fall (est only) | no fall, no fall | no fall, no fall | not in stage 1 |
+| 31 s clip | no (stage 1) | 0 / 64 | 0 / 64 | 0 / 64 | no fall (est only) | no fall, no fall | no fall, no fall | not in stage 1 |
+| 42 s clip | no | 0 / 64 | 3 / 64 | 5 / 64 | not run | no fall (est only) | no fall (est only) | not in stage 1 |
 
-Left out of the repository (falls in mjlab): `motion_clip_seed062_42s.csv`, kept in
-`hrp5p_motion_tracking_deployment/motions_not_ready/clips/`.
+Left out of the repository: the 42 s clip since 23 Oct (falls in mjlab with P9), the 15 and 31 s clips since stage 1;
+kept in `hrp5p_motion_tracking_deployment/motions_not_ready/clips/`.
 
-Tracking in mc_mujoco (torso error from the reference, P8 / P9):
+Tracking in mc_mujoco (torso error from the reference, est):
 
-| Motion | P8 | P9 |
-|---|---|---|
-| stand 10 s | 0.028 m | 0.027 m |
-| 15 s clip | 0.055 m | 0.051 m |
-| 31 s clip | 0.108 m | 0.031 m |
-| 42 s clip | 0.145 m | 0.115 m |
+| Motion | P8 | P9 | P11 |
+|---|---|---|---|
+| stand 10 s | 0.028 m | 0.027 m | 0.022 m |
+| 15 s clip | 0.055 m | 0.051 m | 0.070 m |
+| 31 s clip | 0.108 m | 0.031 m | 0.082 m |
+| 42 s clip | 0.145 m | 0.115 m | not run |

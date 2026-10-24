@@ -38,6 +38,11 @@ The safety branch held the four safety commits (`e302aeb` to `c160847`) for revi
 - P9 replaces P8 in slot 3: P8 fine-tuned 1000 more iterations at the robot's 5 ms tick only. Over whole 59 s motions
   in mjlab at 5 ms, 4 of 128 robots fall on the held-out motions (P8: 41) and 91 of 512 on the training ones (P8: 148);
   its legs move a little more (15-30 % more jerk in mc_mujoco). P8's file stays in `policy/tracking/P8_17998/`.
+- P11 replaces P9 in slot 3: P9 fine-tuned 1000 more iterations with long straight walks and default-arm walks added
+  to its motions. In mjlab at 5 ms no robot of 64 falls on any default-arm walk, the 30, 45 and 60 s continuous ones
+  included (P9: 1, 11, 14), and in mc_mujoco its torso and wrist errors on them are about half of P9's. It falls more
+  than P9 on long walks with the arms held raised and on the held-out random-arm motions (20 of 128, P9: 4), which stage
+  1 does not use. P9's file stays in `policy/tracking/P9_18997/`.
 - `17633ec`: slot 3's default motion is the 10 s stand.
 - Motion sets: the motions directory has one folder per set (`clips/`, `full_60s/`, ...), each with a README of what
   its motions do and their failure rates in simulation. The tracker lists the CSVs of the subfolders by their path
