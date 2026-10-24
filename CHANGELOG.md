@@ -43,6 +43,7 @@ The safety branch held the four safety commits (`e302aeb` to `c160847`) for revi
   included (P9: 1, 11, 14), and in mc_mujoco its torso and wrist errors on them are about half of P9's. It falls more
   than P9 on long walks with the arms held raised and on the held-out random-arm motions (20 of 128, P9: 4), which stage
   1 does not use. P9's file stays in `policy/tracking/P9_18997/`.
+- `walk_default_arms/` gets back its continuous 30, 45 and 60 s walks, which P11 tracks without a fall.
 - `17633ec`: slot 3's default motion is the 10 s stand.
 - Motion sets: the motions directory has one folder per set (`clips/`, `full_60s/`, ...), each with a README of what
   its motions do and their failure rates in simulation. The tracker lists the CSVs of the subfolders by their path

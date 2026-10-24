@@ -14,7 +14,7 @@ READMEs stay here as the record of their rates.
 
 | Folder | Set | In the repository now |
 |---|---|---|
-| [walk_default_arms/](walk_default_arms/README.md) | straight walks at 0.15 m/s, arms kept in their default pose (no arm targets of ours), continuous or stop and go | 15 s; stop-and-go 30, 45, 60 s |
+| [walk_default_arms/](walk_default_arms/README.md) | straight walks at 0.15 m/s, arms kept in their default pose (no arm targets of ours), continuous or stop and go | all seven: continuous 15, 30, 45, 60 s; stop-and-go 30, 45, 60 s |
 | [clips/](clips/README.md) | cut from the 60 s trial motions, each ending standing: a 10 s stand, an 18 s and a 35 s clip | the 10 s stand |
 | [walk/](walk/README.md) | straight walks at 0.15 m/s, arms still in a raised "ready" pose | none (stage 1) |
 | [walk_swing/](walk_swing/README.md) | straight walks at 0.15 m/s with arm swings while walking | none (stage 1) |
