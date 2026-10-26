@@ -44,7 +44,8 @@ the repository; the others stay listed in their folder's README with their rates
   rates under "Slot 4"; it is ready on every motion in the repository too.
 - Slot 5 runs **P17** (`policy/tracking/P17_23992`, 27 Oct), the gentlest, with slot 3's settings: P15 fine-tuned
   with both penalties doubled. Each folder's README gives its rates under "Slot 5"; it is ready on every motion in the
-  repository too, though in simulation it recovers from pushes less well than P15.
+  repository too, though in simulation it recovers from pushes less well than P15 and falls more when the command
+  delay is longer than the 10 ms of the checks (60 s continuous walk at 20 / 30 ms: 5 and 10 of 64, P15 0 and 1).
 - **P11** (`policy/tracking/P11_19996`, P9 plus long straight walks and default-arm walks), **P9**
   (`policy/tracking/P9_18997`, P8 at the robot's 5 ms tick) and **P8** (`policy/tracking/P8_17998`) ran in slot 3
   before; their rates are kept for comparison.
