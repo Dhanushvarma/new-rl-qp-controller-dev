@@ -49,6 +49,10 @@ The safety branch held the four safety commits (`e302aeb` to `c160847`) for revi
   P11); over whole motions 31 of 512 fall on the training motions (P11: 93) and 2 of 128 on the held-out ones (P11:
   20). In mc_mujoco it tracks every stage-1 motion to its end, drifts least with the MCWaiko estimate on the long walks
   (60 s: 0.09 m, P11 0.22) and trips no guard. P11's file stays in `policy/tracking/P11_19996/`.
+- Slot 4: a second motion tracking slot, P15, with slot 3's settings (a YAML anchor). P15 is P13 fine-tuned with
+  penalties on servo torque requests near the limits and on joint accelerations, its exploration noise lowered. It
+  passes every stage-1 motion like P13 and falls much less on long walks with the arms held raised (45 / 60 s: 7 and
+  14 of 64, P13 53 and 57).
 - `17633ec`: slot 3's default motion is the 10 s stand.
 - Motion sets: the motions directory has one folder per set (`clips/`, `full_60s/`, ...), each with a README of what
   its motions do and their failure rates in simulation. The tracker lists the CSVs of the subfolders by their path

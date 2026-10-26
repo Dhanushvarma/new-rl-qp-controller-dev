@@ -31,4 +31,7 @@ mjlab P8 not measured.
 
 mc_mujoco, earlier slot-3 policies: P11 no fall (est); P9 and P8 no fall (est and gt) on all four.
 
+**Slot 4 (P15, 26 Oct):** mjlab 0 / 64 on all four; mc_mujoco no fall (est; torso error 0.019 / 0.082 / 0.105 /
+0.115 m).
+
 The walking comes in short legs with stops, which they all handle; P11 had 2 falls in 64 on the 60 s motion.

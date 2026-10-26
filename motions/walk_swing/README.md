@@ -34,6 +34,9 @@ controller's runaway guard disarms P11 and P9 and holds the posture: a wrist yaw
 6.17 rad/s at 46.7 s; P9: left, 6.04 and 6.16 rad/s); their torso errors are over the tracked part. Found on 24 Oct in
 the run logs; the 23 Oct table had read these runs as plain "no fall". P13 does not trip it.
 
+**Slot 4 (P15, 26 Oct):** mjlab 0 / 0 / 0 / 6 of 64; mc_mujoco no fall and no guard trip (est; torso error 0.029 /
+0.077 / 0.090 / 0.263 m).
+
 Left out of the repository (falls in mjlab): the 45 and 60 s motions, kept in
 `hrp5p_motion_tracking_deployment/motions_not_ready/walk_swing/`. As with the plain walks, the falls come with long
 continuous walking.

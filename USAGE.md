@@ -31,12 +31,13 @@ cmake --install build
 | 1 | `angmom.onnx` | velocity (joystick) |
 | 2 | `push11.onnx` | velocity (joystick) |
 | 3 | `tracking/P13_21994/policy.onnx` | whole-body motion tracking |
+| 4 | `tracking/P15_22993/policy.onnx` | whole-body motion tracking, second choice (slot 3's settings) |
 
 ## Track a motion (slot 3)
 
 In the GUI, under `NewRLQPController`:
 
-1. `Policy` → `Policy index (disarm to change)`: 3.
+1. `Policy` → `Policy index (disarm to change)`: 3 (P13), or 4 (P15, the second choice).
 2. `Tracking` → `Motion (disarm to change)`: pick a motion, listed by set folder (e.g.
    `clips/motion_stand_seed104_10s.csv`). The default is the 10 s stand. `Rescan motions directory` finds files added
    since the start.

@@ -123,10 +123,14 @@ policy_path: [
   # tracking/P9_18997/ and tracking/P8_17998/, P6 final's in tracking/P6_final/
   # (the tracking tests' golden policy).
   "@RL_POLICY_INSTALL_PREFIX@/tracking/P13_21994/policy.onnx",
+  # index 4: P15, the second motion tracking slot (see below), with slot 3's
+  # settings: P13 fine-tuned with penalties on servo torque requests near the
+  # limits and on joint accelerations, its exploration noise lowered.
+  "@RL_POLICY_INSTALL_PREFIX@/tracking/P15_22993/policy.onnx",
 ]
 # Exige MainRobot: HRP5P dans mc_rtc.yaml (module mc_hrp5_p).
-# 3 = the motion tracking slot (P13): select it from the GUI while
-# disarmed, or set it here.
+# 3 and 4 = the motion tracking slots (P13; P15, the second choice): select
+# one from the GUI while disarmed, or set it here.
 default_policy_index: 0
 
 # Replay en boucle fermee (SIMULATION SEULEMENT, refuse sous RobotHardware) :
@@ -565,7 +569,8 @@ policies:
   # FilteredJointPositionAction, seeded with the measured joint angles), clamped
   # to the joint range, to the PostureTask (K posture_stiffness, damping 2
   # sqrt(K), no refVel). 20 ms policy step: 10 ticks at 2 ms, 4 at 5 ms.
-  - use_QP: true
+  - &hrp5p_tracking_slot
+    use_QP: true
     obs_format: 9
     velocity_action: false
     # action_scale and q0 below at full precision (the onnx metadata path rounds
@@ -765,6 +770,16 @@ policies:
       LHDY: 2.0
     ref_joint_order: [RCY, RCR, RCP, RKP, RAP, RAR, LCY, LCR, LCP, LKP, LAP, LAR, WP, WR, WY, HY, HP, RSC, RSP, RSR,
                       RSY, REP, RWRY, RWRR, RWRP, LSC, LSP, LSR, LSY, LEP, LWRY, LWRR, LWRP]
+
+  # index 4: P15, the second whole-body motion tracking slot: P13 fine-tuned
+  # 1000 iterations with penalties on servo torque requests above 80 % of a
+  # joint's limit and on joint accelerations, the entropy bonus off
+  # (mjlab_link_tracking hrp5p_tracking 2026-10-25_12-22-59_P15_noent_ft_from_P13/
+  # model_22993.pt). Its observation, action, gains and tracking settings are
+  # slot 3's (export checked), so it reuses slot 3's block. In mjlab at the 5 ms
+  # tick it passes the stage-1 motions like P13 and falls much less on long
+  # walks with the arms held raised; per-motion rates in the motions READMEs.
+  - *hrp5p_tracking_slot
 
 use_async_inference: false
 log_timing: true

@@ -29,6 +29,9 @@ Method: [../README.md](../README.md#failure-rates). P8 and P9 measured on 23 Oct
 
 mc_mujoco, earlier slot-3 policies: P11 no fall (est); P9 and P8 no fall (est and gt) on all four.
 
+**Slot 4 (P15, 26 Oct):** mjlab 0 / 0 / 7 / 14 of 64 (15, 30, 45, 60 s), far fewer than P13; mc_mujoco no fall (est;
+torso error 0.062 / 0.148 / 0.438 / 0.955 m, the long ones drifting with the estimate).
+
 Long straight walks with the arms held still in front of the body are hard for all of them (their training motions walk
 in 4 to 8 s segments): in mjlab the falls start after about 20 s of walking, mostly as the robot stops at the end of the
 walk, and the robot falls further behind the reference the longer it walks. P11 and P13 hold long walks with the arms

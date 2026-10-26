@@ -39,6 +39,9 @@ the repository; the others stay listed in their folder's README with their rates
 **Policies.**
 - Slot 3 runs **P13** (`policy/tracking/P13_21994`, 25 Oct): P11 fine-tuned with adaptive sampling that practises
   more where robots fall.
+- Slot 4 runs **P15** (`policy/tracking/P15_22993`, 26 Oct), the second choice with slot 3's settings: P13 fine-tuned
+  with penalties on servo torque requests near the limits and on joint accelerations. Each folder's README gives its
+  rates under "Slot 4"; it is ready on every motion in the repository too.
 - **P11** (`policy/tracking/P11_19996`, P9 plus long straight walks and default-arm walks), **P9**
   (`policy/tracking/P9_18997`, P8 at the robot's 5 ms tick) and **P8** (`policy/tracking/P8_17998`) ran in slot 3
   before; their rates are kept for comparison.
