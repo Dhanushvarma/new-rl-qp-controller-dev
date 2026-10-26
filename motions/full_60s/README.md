@@ -34,5 +34,8 @@ mc_mujoco P11 and P13 not run on these.
 **Slot 4 (P15, 26 Oct):** mjlab 2 / 63, 0 / 51, 0 / 56, 0 / 82, 1 / 68 (seeds 010, 060, 062, 084, 104); mc_mujoco not
 run.
 
+**Slot 5 (P17, 27 Oct):** mjlab 0 / 63, 0 / 51, 0 / 56, 0 / 82, 0 / 68 (seeds 010, 060, 062, 084, 104); mc_mujoco not
+run.
+
 Left out of the repository (falls in mjlab): seeds 060, 062, 084 and 104, kept in
 `hrp5p_motion_tracking_deployment/motions_not_ready/full_60s/`.

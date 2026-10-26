@@ -53,6 +53,10 @@ The safety branch held the four safety commits (`e302aeb` to `c160847`) for revi
   penalties on servo torque requests near the limits and on joint accelerations, its exploration noise lowered. It
   passes every stage-1 motion like P13 and falls much less on long walks with the arms held raised (45 / 60 s: 7 and
   14 of 64, P13 53 and 57).
+- Slot 5: a third motion tracking slot, P17, with slot 3's settings. P17 is P15 fine-tuned with both penalties
+  doubled: the gentlest (servo torque requests near the limits about 3 times rarer than P15's). It passes every
+  stage-1 motion and holds the torso closest to the reference through the controller; it tracks the wrists'
+  orientation less closely and recovers from pushes less well in simulation.
 - `17633ec`: slot 3's default motion is the 10 s stand.
 - Motion sets: the motions directory has one folder per set (`clips/`, `full_60s/`, ...), each with a README of what
   its motions do and their failure rates in simulation. The tracker lists the CSVs of the subfolders by their path

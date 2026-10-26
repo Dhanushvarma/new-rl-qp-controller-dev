@@ -32,6 +32,9 @@ gt; 42 s est only).
 **Slot 4 (P15, 26 Oct):** mjlab 0 / 64 on all four; mc_mujoco no fall on the stand (est, gt; torso error 0.018 m;
 ready) and on the 15 and 31 s clips (est; 0.048 and 0.052 m); 42 s not run.
 
+**Slot 5 (P17, 27 Oct):** mjlab 0 / 64 on all four; mc_mujoco no fall on the stand (est, gt; torso error 0.009 m;
+ready) and on the 15 and 31 s clips (est; 0.025 and 0.063 m); 42 s not run.
+
 Left out of the repository: the 42 s clip since 23 Oct (falls in mjlab with P9), the 15 and 31 s clips since stage 1;
 kept in `hrp5p_motion_tracking_deployment/motions_not_ready/clips/`.
 

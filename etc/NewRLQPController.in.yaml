@@ -127,10 +127,13 @@ policy_path: [
   # settings: P13 fine-tuned with penalties on servo torque requests near the
   # limits and on joint accelerations, its exploration noise lowered.
   "@RL_POLICY_INSTALL_PREFIX@/tracking/P15_22993/policy.onnx",
+  # index 5: P17, the third motion tracking slot (see below), with slot 3's
+  # settings: P15 fine-tuned with both penalties doubled, the gentlest.
+  "@RL_POLICY_INSTALL_PREFIX@/tracking/P17_23992/policy.onnx",
 ]
 # Exige MainRobot: HRP5P dans mc_rtc.yaml (module mc_hrp5_p).
-# 3 and 4 = the motion tracking slots (P13; P15, the second choice): select
-# one from the GUI while disarmed, or set it here.
+# 3, 4 and 5 = the motion tracking slots (P13; P15, the second choice; P17,
+# the gentlest): select one from the GUI while disarmed, or set it here.
 default_policy_index: 0
 
 # Replay en boucle fermee (SIMULATION SEULEMENT, refuse sous RobotHardware) :
@@ -779,6 +782,16 @@ policies:
   # slot 3's (export checked), so it reuses slot 3's block. In mjlab at the 5 ms
   # tick it passes the stage-1 motions like P13 and falls much less on long
   # walks with the arms held raised; per-motion rates in the motions READMEs.
+  - *hrp5p_tracking_slot
+
+  # index 5: P17, the third whole-body motion tracking slot: P15 fine-tuned
+  # 1000 iterations with both penalties doubled, the entropy bonus still off
+  # (mjlab_link_tracking hrp5p_tracking 2026-10-26_17-36-14_P17_actlimits2x_ft_from_P15/
+  # model_23992.pt). Slot 3's observation, action, gains and tracking settings
+  # (export checked). The gentlest: servo torque requests near the limits about
+  # 3 times rarer than P15's; it holds the torso closest to the reference but
+  # the wrists further off in orientation, and recovers from pushes less well
+  # in simulation; per-motion rates in the motions READMEs.
   - *hrp5p_tracking_slot
 
 use_async_inference: false

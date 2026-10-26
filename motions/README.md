@@ -42,6 +42,9 @@ the repository; the others stay listed in their folder's README with their rates
 - Slot 4 runs **P15** (`policy/tracking/P15_22993`, 26 Oct), the second choice with slot 3's settings: P13 fine-tuned
   with penalties on servo torque requests near the limits and on joint accelerations. Each folder's README gives its
   rates under "Slot 4"; it is ready on every motion in the repository too.
+- Slot 5 runs **P17** (`policy/tracking/P17_23992`, 27 Oct), the gentlest, with slot 3's settings: P15 fine-tuned
+  with both penalties doubled. Each folder's README gives its rates under "Slot 5"; it is ready on every motion in the
+  repository too, though in simulation it recovers from pushes less well than P15.
 - **P11** (`policy/tracking/P11_19996`, P9 plus long straight walks and default-arm walks), **P9**
   (`policy/tracking/P9_18997`, P8 at the robot's 5 ms tick) and **P8** (`policy/tracking/P8_17998`) ran in slot 3
   before; their rates are kept for comparison.
