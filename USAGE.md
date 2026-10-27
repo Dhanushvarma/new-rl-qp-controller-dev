@@ -47,6 +47,9 @@ In the GUI, under `NewRLQPController`:
    - it then tracks the motion from where it stands and faces;
    - after the last frame it holds that frame (`Tracking state`: ended).
 4. `HOLD (disarm)` at any time: the posture target freezes at the last command.
+5. ARM only from the standing pose at the start. ARM always restarts the motion from its first frame: after a HOLD
+   mid-motion the feet can be apart, and the ramp to the first frame (feet side by side) would slide a foot. Do not
+   ARM again then; bring the robot back to its standing pose first (in mc_mujoco: restart it).
 
 For the first trials (stage 1, walking first), run one motion at a time with a hand on the stop:
 1. `clips/motion_stand_seed104_10s.csv` (stands still);
