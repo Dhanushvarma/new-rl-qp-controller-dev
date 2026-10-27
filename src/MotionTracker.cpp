@@ -120,6 +120,8 @@ const char * MotionTracker::stateName(State s)
       return "tracking";
     case State::Ended:
       return "ended";
+    case State::HandingOver:
+      return "handing over";
   }
   return "?";
 }
@@ -185,9 +187,10 @@ void MotionTracker::configure()
   cutoffHz_ = tracking("action_filter_cutoff_hz");
   armRampSpeed_ = tracking("arm_ramp_speed", 0.1);
   armSettleTime_ = tracking("arm_settle_time", 1.0);
-  if(!(armRampSpeed_ > 0.0) || !(armSettleTime_ >= 0.0))
+  armHandoverTime_ = tracking("arm_handover_time", 1.0);
+  if(!(armRampSpeed_ > 0.0) || !(armSettleTime_ >= 0.0) || !(armHandoverTime_ >= 0.0))
   {
-    mc_rtc::log::error_and_throw("[Tracking] arm_ramp_speed must be > 0 and arm_settle_time >= 0");
+    mc_rtc::log::error_and_throw("[Tracking] arm_ramp_speed must be > 0, arm_settle_time and arm_handover_time >= 0");
   }
   if(tracking.has("use_ground_truth_base"))
   {
@@ -302,9 +305,9 @@ void MotionTracker::configure()
 
   rescan();
   mc_rtc::log::info("[Tracking] policy {} tracks motions: {} CSVs in {}; filter {} Hz (alpha {:.4f}); one inference "
-                    "every {} ticks; base_source {}; ARM ramps at {} rad/s, then {} s settle",
+                    "every {} ticks; base_source {}; ARM ramps at {} rad/s, then {} s settle, {} s hand-over",
                     ctl.currentPolicyIndex, motionFiles_.size(), motionsDir_, cutoffHz_, alpha_, ticksPerStep_,
-                    baseSourceName(baseSource_), armRampSpeed_, armSettleTime_);
+                    baseSourceName(baseSource_), armRampSpeed_, armSettleTime_, armHandoverTime_);
   std::string motion;
   tracking("motion", motion);
   if(!motion.empty())
@@ -538,9 +541,12 @@ bool MotionTracker::start()
   const double rampTime = maxOffset < 1e-4 ? 0.0 : std::max(1.0, maxOffset / armRampSpeed_);
   rampTicks_ = static_cast<unsigned long>(std::lround(rampTime / dt_));
   settleTicks_ = static_cast<unsigned long>(std::lround(armSettleTime_ / dt_));
+  // Whole policy steps, so that the inferences keep their cadence when the motion clock starts
+  const double stepTime = dt_ * static_cast<double>(ticksPerStep_);
+  handoverTicks_ = static_cast<unsigned long>(std::ceil(armHandoverTime_ / stepTime - 1e-9)) * ticksPerStep_;
   sessionTick_ = 0;
   state_ = rampTicks_ > 0 ? State::Ramping : State::Settling;
-  t_ = -static_cast<double>(rampTicks_ + settleTicks_) * dt_;
+  t_ = -static_cast<double>(rampTicks_ + settleTicks_ + handoverTicks_) * dt_;
   frame_ = 0;
   usedFrame_ = 0;
   filterFresh_ = true;
@@ -548,9 +554,9 @@ bool MotionTracker::start()
   fallReported_ = false;
   lastAction_.setZero();
   mc_rtc::log::warning("[Tracking] ARMED on {}: {:.2f} s min-jerk ramp to its first frame (largest move {:.3f} rad, "
-                       "{}), {:.2f} s settle, then {:.2f} s of tracking",
+                       "{}), {:.2f} s settle, {:.2f} s hand-over, then {:.2f} s of tracking",
                        selected_, rampTime, maxOffset, ctl_.jointNames[static_cast<size_t>(worst)],
-                       static_cast<double>(settleTicks_) * dt_, duration());
+                       static_cast<double>(settleTicks_) * dt_, static_cast<double>(handoverTicks_) * dt_, duration());
   return true;
 }
 
@@ -589,7 +595,8 @@ void MotionTracker::run()
     }
     readRobot();
     const unsigned long k = sessionTick_++;
-    const unsigned long trackStart = rampTicks_ + settleTicks_;
+    const unsigned long handoverStart = rampTicks_ + settleTicks_;
+    const unsigned long trackStart = handoverStart + handoverTicks_;
     t_ = (static_cast<double>(k) - static_cast<double>(trackStart)) * dt_;
     if(k < rampTicks_)
     {
@@ -599,10 +606,35 @@ void MotionTracker::run()
       ctl_.q_rl = rampStart_ + s * (rampTarget_ - rampStart_);
       state_ = State::Ramping;
     }
-    else if(k < trackStart)
+    else if(k < handoverStart)
     {
       ctl_.q_rl = rampTarget_;
       state_ = State::Settling;
+    }
+    else if(k < trackStart)
+    {
+      const unsigned long h = k - handoverStart;
+      if(h == 0)
+      {
+        startHandover();
+      }
+      if(h % ticksPerStep_ == 0)
+      {
+        infer();
+      }
+      // infer() disarms on an error (state Idle): leave the posture target where it is
+      if(state_ == State::HandingOver)
+      {
+        // Min-jerk from the first frame to the policy's filtered target, every tick; at the last tick the target
+        double s = static_cast<double>(h + 1) / static_cast<double>(handoverTicks_);
+        s = s * s * s * (10.0 + s * (-15.0 + 6.0 * s));
+        for(Eigen::Index j = 0; j < nAct_; ++j)
+        {
+          const int i = dof_[static_cast<size_t>(j)];
+          const double q = rampTarget_(i) + s * (target_(j) - rampTarget_(i));
+          ctl_.q_rl(i) = std::clamp(q, lower_(j), upper_(j));
+        }
+      }
     }
     else
     {
@@ -718,7 +750,7 @@ void MotionTracker::readRobot()
   }
 }
 
-void MotionTracker::startTracking()
+void MotionTracker::startHandover()
 {
   // The motion's first anchor gets the robot anchor's horizontal position and heading (readRobot() ran this tick)
   motion_->alignTo(in_.anchorPos, in_.anchorRot);
@@ -727,6 +759,25 @@ void MotionTracker::startTracking()
   filterFresh_ = true;
   endReported_ = false;
   lastAction_.setZero();
+  state_ = State::HandingOver;
+  mc_rtc::log::info("[Tracking] handing over to the policy on {}'s first frame: {:.2f} s blend from the first frame "
+                    "to its target",
+                    selected_, static_cast<double>(handoverTicks_) * dt_);
+}
+
+void MotionTracker::startTracking()
+{
+  // After a hand-over the policy already runs on the aligned motion: keep its filter and previous action
+  if(handoverTicks_ == 0)
+  {
+    // The motion's first anchor gets the robot anchor's horizontal position and heading (readRobot() ran this tick)
+    motion_->alignTo(in_.anchorPos, in_.anchorRot);
+    filterFresh_ = true;
+    lastAction_.setZero();
+  }
+  frame_ = 0;
+  usedFrame_ = 0;
+  endReported_ = false;
   state_ = State::Tracking;
   mc_rtc::log::success("[Tracking] tracking {} from frame 0: robot anchor at ({:.3f}, {:.3f}, {:.3f}) heading {:.1f} "
                        "deg ({}), one inference every {} ticks",
@@ -784,10 +835,15 @@ void MotionTracker::infer()
     filterFresh_ = false;
   }
   target_ += alpha_ * (command_ - target_);
+  // During the hand-over run() blends q_rl towards target_ every tick
+  const bool handingOver = state_ == State::HandingOver;
   for(Eigen::Index j = 0; j < nAct_; ++j)
   {
     const int i = dof_[static_cast<size_t>(j)];
-    ctl_.q_rl(i) = std::clamp(target_(j), lower_(j), upper_(j));
+    if(!handingOver)
+    {
+      ctl_.q_rl(i) = std::clamp(target_(j), lower_(j), upper_(j));
+    }
     ctl_.currentActionScaled(i) = scale_(j) * action(j);
   }
   // The observation's previous action is the raw network output
@@ -795,6 +851,10 @@ void MotionTracker::infer()
   obs_ = obs;
   ctl_.currentObservation = obs;
   ctl_.currentAction = action;
+  if(handingOver)
+  {
+    return; // the reference stays on the first frame
+  }
   if(!endReported_ && frame_ + 1 >= motion_->frames())
   {
     endReported_ = true;

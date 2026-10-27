@@ -44,6 +44,8 @@ In the GUI, under `NewRLQPController`:
    since the start.
 3. `ARM policy`:
    - the robot ramps to the motion's first frame and settles for 2 s;
+   - the policy takes over over 1 s while the motion holds its first frame: the posture target blends from the
+     first frame to the policy's target (`Tracking state`: handing over);
    - it then tracks the motion from where it stands and faces;
    - after the last frame it holds that frame (`Tracking state`: ended).
 4. `HOLD (disarm)` at any time: the posture target freezes at the last command.
@@ -94,6 +96,7 @@ Where to change them:
 | `tracking.motions_dir` | slot 3 | defaults to the installed motions; point it at the repository's `motions/` to skip reinstalling |
 | `tracking.base_source` | slot 3 | `estimate` (robot) or `ground_truth` (simulator only) |
 | `tracking.arm_ramp_speed`, `tracking.arm_settle_time` | slot 3 | arming ramp speed (rad/s) and settle time (s) |
+| `tracking.arm_handover_time` | slot 3 | hand-over to the policy after the settle (s, 0 = none: the policy's first command reaches the robot in one step) |
 | `fall_disarm_tilt`, `runaway_disarm_vel` | each slot | the guards above |
 | `sim_servo_gains` | top level | simulator only: a servo gains file for mc_mujoco's PD; ignored on the robot |
 
@@ -109,7 +112,7 @@ Where to change them:
 
 | Entry | Content |
 |---|---|
-| `Tracking_state` | 0 idle, 1 ramping, 2 settling, 3 tracking, 4 ended |
+| `Tracking_state` | 0 idle, 1 ramping, 2 settling, 5 handing over, 3 tracking, 4 ended |
 | `Tracking_motion`, `Tracking_motionTime`, `Tracking_frame` | the motion and the position in it |
 | `Tracking_anchorPos`, `Tracking_anchorQuat` | the torso as observed |
 | `Tracking_refAnchorPos`, `Tracking_refAnchorQuat` | the torso in the reference |

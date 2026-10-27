@@ -27,8 +27,12 @@ struct NewRLQPController;
  *   and are checked against the policy (frame period, joints, observation size, the ONNX joint order).
  * - ARM: a min-jerk ramp from the held posture target to the motion's first-frame joint angles (`arm_ramp_speed`
  *   rad/s mean, at least 1 s), with the other actuated joints going to q0; then a hold of `arm_settle_time` s; then
- *   tracking from frame 0, the motion aligned to the robot anchor's horizontal position and heading
- *   (TrackingMotion::alignTo), with fresh filter and previous-action state.
+ *   a hand-over of `arm_handover_time` s (0 skips it): the motion is aligned to the robot anchor's horizontal
+ *   position and heading (TrackingMotion::alignTo), the policy runs on the first frame held still, with fresh filter
+ *   and previous-action state, and the posture target moves from the first frame to the policy's filtered target
+ *   along a min-jerk blend, every tick; then tracking from frame 0, the filter and previous action carried over.
+ *   Without the hand-over the policy's first command (up to 0.2 rad from the first frame for P15) reached the
+ *   posture target in one step, a jerk at the tracking start.
  * - Tracking: every policy step (every policy_step_size / timeStep ticks) the observation of frame k
  *   (obs_format 9, buildTrackingObservation) goes to the policy; the command q0 + scale * action of the policy joints
  *   is low-pass filtered as mjlab's FilteredJointPositionAction does (target += alpha (command - target), alpha = 1 -
@@ -55,7 +59,8 @@ struct MotionTracker
     Ramping = 1,
     Settling = 2,
     Tracking = 3,
-    Ended = 4
+    Ended = 4,
+    HandingOver = 5 ///< After Settling: the policy runs on the first frame, blended in
   };
 
   /** Where the observed floating-base state comes from (`tracking.base_source`) */
@@ -155,6 +160,7 @@ private:
   const BaseState & observedBase() const;
   /** Robot state for the observation (the observed base and the encoders), into in_ */
   void readRobot();
+  void startHandover();
   void startTracking();
   void infer();
   /** Check a loaded motion against the current policy; empty if usable */
@@ -176,6 +182,7 @@ private:
   double alpha_ = 1.0;
   double armRampSpeed_ = 0.1;
   double armSettleTime_ = 1.0;
+  double armHandoverTime_ = 1.0;
   BaseSource baseSource_ = BaseSource::Estimate;
   double fallHeight_ = 0.5;
   std::string motionsDir_;
@@ -208,9 +215,11 @@ private:
   unsigned long sessionTick_ = 0;
   unsigned long rampTicks_ = 0;
   unsigned long settleTicks_ = 0;
+  unsigned long handoverTicks_ = 0; ///< A multiple of ticksPerStep_, 0 without a hand-over
   Eigen::VectorXd rampStart_; ///< q_rl indexing
   Eigen::VectorXd rampTarget_; ///< q_rl indexing
-  double t_ = -1.0; ///< Time from the tracking start (counts up to 0 while ramping and settling), -1 while idle
+  double t_ = -1.0; ///< Time from the tracking start (counts up to 0 while ramping, settling and handing over), -1
+                    ///< while idle
   size_t frame_ = 0; ///< Motion frame of the next inference
   size_t usedFrame_ = 0; ///< Motion frame of the last inference
   bool filterFresh_ = true;

@@ -617,9 +617,14 @@ policies:
       observations: [command, motion_anchor_pos_b, motion_anchor_ori_b, base_lin_vel, base_ang_vel, joint_pos,
                      joint_vel, actions]
       # ARM: min-jerk ramp to the first frame at this mean joint speed (rad/s,
-      # at least 1 s), then a hold of arm_settle_time (s) before frame 0.
+      # at least 1 s), then a hold of arm_settle_time (s), then a hand-over of
+      # arm_handover_time (s, 0 = none) before frame 0: the policy runs on the
+      # first frame held still and the posture target blends from the first
+      # frame to the policy's target (min-jerk), so its first command does not
+      # reach the robot in one step.
       arm_ramp_speed: 0.1
       arm_settle_time: 2.0
+      arm_handover_time: 1.0
       # Where the observed floating-base state (anchor pose, base velocities)
       # comes from: estimate (the observer pipeline's floating base, MCWaiko, and
       # the IMU gyro) or ground_truth (the simulator's free joint, refused on the
