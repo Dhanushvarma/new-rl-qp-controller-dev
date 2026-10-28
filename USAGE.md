@@ -44,7 +44,7 @@ In the GUI, under `NewRLQPController`:
    since the start.
 3. `ARM policy`:
    - the robot ramps to the motion's first frame and settles for 2 s;
-   - the policy takes over over 1 s while the motion holds its first frame: the posture target blends from the
+   - the policy takes over over 5 s while the motion holds its first frame: the posture target blends from the
      first frame to the policy's target (`Tracking state`: handing over);
    - it then tracks the motion from where it stands and faces;
    - after the last frame it holds that frame (`Tracking state`: ended).

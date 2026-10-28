@@ -187,7 +187,7 @@ void MotionTracker::configure()
   cutoffHz_ = tracking("action_filter_cutoff_hz");
   armRampSpeed_ = tracking("arm_ramp_speed", 0.1);
   armSettleTime_ = tracking("arm_settle_time", 1.0);
-  armHandoverTime_ = tracking("arm_handover_time", 1.0);
+  armHandoverTime_ = tracking("arm_handover_time", 5.0);
   if(!(armRampSpeed_ > 0.0) || !(armSettleTime_ >= 0.0) || !(armHandoverTime_ >= 0.0))
   {
     mc_rtc::log::error_and_throw("[Tracking] arm_ramp_speed must be > 0, arm_settle_time and arm_handover_time >= 0");

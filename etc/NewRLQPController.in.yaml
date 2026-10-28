@@ -624,7 +624,7 @@ policies:
       # reach the robot in one step.
       arm_ramp_speed: 0.1
       arm_settle_time: 2.0
-      arm_handover_time: 1.0
+      arm_handover_time: 5.0
       # Where the observed floating-base state (anchor pose, base velocities)
       # comes from: estimate (the observer pipeline's floating base, MCWaiko, and
       # the IMU gyro) or ground_truth (the simulator's free joint, refused on the

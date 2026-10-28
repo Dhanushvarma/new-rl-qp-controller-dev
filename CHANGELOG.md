@@ -16,7 +16,7 @@ The safety branch held the four safety commits (`e302aeb` to `c160847`) for revi
 - It has nothing the main branch lacks.
 
 The soft hand-over branch (27 Oct), not yet in `hrp5p-motion-tracking`:
-- ARM adds a hand-over after the settle (`tracking.arm_handover_time`, 1 s; 0 = none). The motion is aligned
+- ARM adds a hand-over after the settle (`tracking.arm_handover_time`, 5 s; 0 = none). The motion is aligned
   and the policy runs on its first frame held still, while the posture target blends from the first frame to
   the policy's filtered target (min-jerk, every tick). Tracking then starts from frame 0, keeping the filter
   and previous action.
@@ -24,6 +24,7 @@ The soft hand-over branch (27 Oct), not yet in `hrp5p-motion-tracking`:
   shoulder; 0.13 rad, left knee). Before, the filter passed 40 % of it in one step: a target step of up to
   0.09 rad and a jerk at the tracking start.
 - `Tracking_state` 5 = handing over (GUI: `handing over`).
+- 28 Oct: the default hand-over goes from 1 s to 5 s, a slower take-over to try in simulation first.
 
 ## Motion tracking (new, policy slot 3)
 
