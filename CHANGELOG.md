@@ -103,6 +103,7 @@ The soft hand-over branch (27 Oct), not yet in `hrp5p-motion-tracking`:
 - `c160847`: top-level `verbose_log` (default `false`) gates the bulky entries: the observation, constants, joint
   copies and self-collision distances. That is about half the per-tick log. Simulation analyses that read those
   entries need `true`.
+- `tools/plot_mc_log.py` makes PNG plots of a run from its log ([USAGE](USAGE.md#plots)).
 
 ## Simulation only (no effect on the robot)
 
