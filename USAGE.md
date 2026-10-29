@@ -117,6 +117,23 @@ Where to change them:
 | `Tracking_action`, `Tracking_target` | the raw policy output and the filtered joint target |
 | `NewRLQPController_armed`, `_disarmReason`, `_torsoTilt`, `_maxJointVel`, `_maxJointVelIndex` | guard state |
 
+## Plots
+
+`tools/plot_mc_log.py` turns a run's log into PNG plots, from mc_mujoco or the robot. It needs numpy, matplotlib and
+`mc_bin_utils` from the mc_rtc install, not the mc_rtc Python bindings.
+
+```bash
+python3 tools/plot_mc_log.py                                   # the latest log
+python3 tools/plot_mc_log.py LOG.bin --window 20 35 --only feet,legs_torque
+python3 tools/plot_mc_log.py LOG.bin --list                    # the log's entries
+```
+
+- Without a path it takes `mc-control-NewRLQPController-latest.bin` from `~/workspace/runs/logs` or `/tmp`.
+- The plots go to `plots/<log name>/` beside the logs folder, with a `summary.txt`. The script's docstring lists them:
+  the tracking overview, the torso path, joint angles and torques over time, the joint tracking error, foot forces,
+  per-joint torque peaks, the IMU, controller timing and the policy action.
+- On the robot `tauIn` holds the motor currents, so the torque plots are in A, not N m.
+
 ## Tests
 
 ```bash
