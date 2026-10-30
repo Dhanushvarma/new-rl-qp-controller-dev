@@ -77,6 +77,9 @@ The soft hand-over branch (27 Oct), not yet in `hrp5p-motion-tracking`:
 - Stage 1, walking first: the motions folder keeps only the 10 s stand and the default-arm walks (`walk_default_arms/`,
   generated with no arm targets); the random-arm sets (odd wrist poses) are out of the repository for now, their READMEs
   kept as records.
+- Stage 2, arm swing: `walk_natural_swing/motion_walk_natural_swing_15s.csv`, the 15 s default-arm walk with a gentle
+  arm swing timed by the footsteps (shoulders and elbows; the wrists keep their stance angles). No robot of 64 falls in
+  mjlab with P13, P15 or P17, and none falls in mc_mujoco.
 - Tests: `tests/tracking` compares the observation and the policy output with mjlab golden CSVs (`-DTRACKING_GOLDEN_CSV`).
 
 ## Safety
