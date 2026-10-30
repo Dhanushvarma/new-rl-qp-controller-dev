@@ -23,6 +23,9 @@ Plots:
                each joint's torque over time (tauIn: N m in mc_mujoco; on the robot it holds motor currents in A)
   joint_error  per joint, policy target minus encoder while tracking (RMS and largest)
   feet         each foot's vertical force in body weights, and a close-up of a few steps
+  impact       each ankle's vertical velocity and each foot's force around touchdowns (close-up), and per landing the
+               velocity just before touchdown and the largest force in the first 100 ms. The ankle velocities come
+               from the base pose (ground truth in simulation, else the estimate) and the encoders through the URDF
   torques      per joint, the largest and 95th percentile torque while tracking; the controller's largest
                torque-to-limit ratio over time
   imu          the IMU's linear acceleration and angular velocity
@@ -37,6 +40,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import xml.etree.ElementTree as ET
 
 import matplotlib
 
@@ -159,12 +163,18 @@ ENTRIES = (
     "Tracking_gtAnchorQuat",
     "Tracking_estAnchorPos",
     "Tracking_estAnchorQuat",
+    "Tracking_baseGT_pos",
+    "Tracking_baseGT_quat",
+    "Tracking_baseEst_pos",
+    "Tracking_baseEst_quat",
     "NewRLQPController_armed",
     "NewRLQPController_disarmReason",
     "NewRLQPController_torsoTilt",
     "NewRLQPController_rawTorqueRatioMax",
     "NewRLQPController_leftFootContact",
     "NewRLQPController_rightFootContact",
+    "NewRLQPController_leftFootImpactVel",
+    "NewRLQPController_rightFootImpactVel",
     "LeftFootForceSensor",
     "RightFootForceSensor",
     "Accelerometer_linearAcceleration",
@@ -183,6 +193,8 @@ LOG_DIRS = (os.path.expanduser("~/workspace/runs/logs"), "/tmp")
 BLUE, ORANGE, AQUA = "#2a78d6", "#eb6834", "#1baf7a"
 INK, INK2, AXIS, GRID, SURFACE, RED = "#0b0b0b", "#52514e", "#c3c2b7", "#e1e0d9", "#fcfcfb", "#d03b3b"
 CONTACT_ON, CONTACT_OFF = 30.0, 15.0  # N, the controller's touchdown rule (impact_force_threshold and half of it)
+IMPACT_WINDOW = 0.1  # s after a touchdown: the largest force in it is the landing's impact force
+ANKLES = {"left": "Lleg_Link5", "right": "Rleg_Link5"}  # the bodies the foot F/T sensors are attached to
 JOINT_KEY = (
     "R/L right/left, C hip (crotch), K knee, A ankle, W waist, H neck, S shoulder, E elbow, WR wrist; "
     "Y/R/P yaw/roll/pitch"
@@ -194,6 +206,7 @@ TITLES = {
     "upper_body": "Upper body joint angles [deg]",
     "joint_error": "Joint tracking error [deg]: policy target minus encoder",
     "feet": "Foot contact forces",
+    "impact": "Foot impacts: ankle vertical velocity before touchdown and landing force",
     "legs_torque": "Leg joint torques [N m] (tauIn)",
     "upper_body_torque": "Upper body joint torques [N m] (tauIn)",
     "torques": "Joint torques [N m]: per joint, over the whole tracking (tauIn)",
@@ -303,6 +316,96 @@ def reorder(arr, order, names):
     if arr is None or arr.shape[1] != len(order):
         return None
     return arr[:, [order.index(n) for n in names]]
+
+
+# ---------------------------------------------------------------------------------------------------------- kinematics
+
+
+def find_urdf(path):
+    """HRP5Pmain.urdf: the given path, else the one in the mc_rtc install mc_bin_utils comes from, or None."""
+    if not path:
+        prefix = os.path.dirname(os.path.dirname(shutil.which("mc_bin_utils") or ""))
+        path = os.path.join(prefix, "share", "mc_rtc", "hrp5_p_description", "urdf", "HRP5Pmain.urdf")
+    return path if os.path.exists(path) else None
+
+
+def floats(el, key, default):
+    text = el.get(key) if el is not None and el.get(key) else default
+    return np.array([float(v) for v in text.split()])
+
+
+def rpy_matrix(r, p, y):
+    cr, sr, cp, sp, cy, sy = np.cos(r), np.sin(r), np.cos(p), np.sin(p), np.cos(y), np.sin(y)
+    return np.array(
+        [
+            [cy * cp, cy * sp * sr - sy * cr, cy * sp * cr + sy * sr],
+            [sy * cp, sy * sp * sr + cy * cr, sy * sp * cr - cy * sr],
+            [-sp, cp * sr, cp * cr],
+        ]
+    )
+
+
+def axis_rotations(axis, q):
+    """Rotations by the angles q [T] about an axis, as [T, 3, 3] (Rodrigues)."""
+    k = axis / np.linalg.norm(axis)
+    K = np.array([[0.0, -k[2], k[1]], [k[2], 0.0, -k[0]], [-k[1], k[0], 0.0]])
+    s, c = np.sin(q)[:, None, None], np.cos(q)[:, None, None]
+    return np.eye(3) + s * K + (1.0 - c) * (K @ K)
+
+
+def quat_matrices(q):
+    """Rotation matrices [T, 3, 3] of quaternions [T, 4] (wxyz)."""
+    w, x, y, z = (q / np.linalg.norm(q, axis=1, keepdims=True)).T
+    rows = (
+        (1 - 2 * (y * y + z * z), 2 * (x * y - w * z), 2 * (x * z + w * y)),
+        (2 * (x * y + w * z), 1 - 2 * (x * x + z * z), 2 * (y * z - w * x)),
+        (2 * (x * z - w * y), 2 * (y * z + w * x), 1 - 2 * (x * x + y * y)),
+    )
+    return np.stack([np.stack(r, axis=1) for r in rows], axis=1)
+
+
+def chain(urdf, link):
+    """The joints from the URDF's root to a link, root first: (name, type, origin xyz, origin rotation, axis)."""
+    joints = {j.find("child").get("link"): j for j in ET.parse(urdf).getroot().findall("joint")}
+    out = []
+    while link in joints:
+        j = joints[link]
+        origin = j.find("origin")
+        rot = rpy_matrix(*floats(origin, "rpy", "0 0 0"))
+        out.append(
+            (j.get("name"), j.get("type"), floats(origin, "xyz", "0 0 0"), rot, floats(j.find("axis"), "xyz", "1 0 0"))
+        )
+        link = j.find("parent").get("link")
+    return out[::-1]
+
+
+def ankle_positions(run):
+    """Each ankle's world position [T, 3] from the base pose and the encoders through the URDF, and the base's source;
+    or None and the reason."""
+    d = run.d
+    urdf = find_urdf(run.args.urdf)
+    q = vec(d, "qIn")
+    if urdf is None:
+        return None, "HRP5Pmain.urdf not found, give it with --urdf"
+    if q is None or q.shape[1] != len(ROBOT_JOINTS):
+        return None, "no encoder angles (qIn)"
+    for source, name in (("ground truth", "Tracking_baseGT"), ("estimated", "Tracking_baseEst")):
+        pos, quat = comp(d, f"{name}_pos"), comp(d, f"{name}_quat", "wxyz")
+        if need(pos, quat):
+            break
+    else:
+        return None, "no base pose"
+    base_rot = quat_matrices(quat)
+    out = {}
+    for side, link in ANKLES.items():
+        rot, p = np.broadcast_to(np.eye(3), (len(q), 3, 3)), np.zeros((len(q), 3))
+        for name, kind, xyz, origin_rot, axis in chain(urdf, link):
+            p = p + rot @ xyz
+            rot = rot @ origin_rot
+            if kind in ("revolute", "continuous"):
+                rot = rot @ axis_rotations(axis, q[:, ROBOT_JOINTS.index(name)])
+        out[side] = pos + np.einsum("tij,tj->ti", base_rot, p)
+    return out, source
 
 
 # ---------------------------------------------------------------------------------------------------------- the run
@@ -612,14 +715,28 @@ def contacts(fz, flag):
     return list(zip(np.flatnonzero(edges == 1), np.flatnonzero(edges == -1)))
 
 
+def body_weight(run, total):
+    """Both feet's force [N] while standing in the second before the tracking (else the first second)."""
+    stand = (run.t >= run.span[0] - 1.0) & (run.t < run.span[0]) if run.span else run.t < run.t[0] + 1.0
+    return float(np.median(total[stand])) if stand.any() else float(np.median(total[run.sel]))
+
+
+def zoom(run):
+    """The close-up window [s]: --zoom, else 4 s in the middle of the tracking (or at the start of the window)."""
+    if run.args.zoom:
+        return tuple(run.args.zoom)
+    if run.span:
+        mid = 0.5 * (run.span[0] + run.span[1])
+        return mid - 2.0, mid + 2.0
+    return run.tw[0], min(run.tw[0] + 4.0, run.tw[-1])
+
+
 def plot_feet(run):
     d = run.d
     L, R = d.get("LeftFootForceSensor_fz"), d.get("RightFootForceSensor_fz")
     if not need(L, R):
         return False
-    total = L + R
-    stand = (run.t >= run.span[0] - 1.0) & (run.t < run.span[0]) if run.span else run.t < run.t[0] + 1.0
-    bw = float(np.median(total[stand])) if stand.any() else float(np.median(total[run.sel]))
+    bw = body_weight(run, L + R)
     peaks = {}
     for side, fz, flag in (
         ("left", L, d.get("NewRLQPController_leftFootContact")),
@@ -628,13 +745,7 @@ def plot_feet(run):
         # Landings while tracking: contacts that start then (a stance from before the tracking is not one)
         p = [fz[a:b].max() / bw for a, b in contacts(fz, flag) if run.track[a] and b - a > 1]
         peaks[side] = np.array(p)
-    if run.args.zoom:
-        z0, z1 = run.args.zoom
-    elif run.span:
-        mid = 0.5 * (run.span[0] + run.span[1])
-        z0, z1 = mid - 2.0, mid + 2.0
-    else:
-        z0, z1 = run.tw[0], min(run.tw[0] + 4.0, run.tw[-1])
+    z0, z1 = zoom(run)
     fig, axes = plt.subplots(2, 1, figsize=(11, 6.5), constrained_layout=True)
     for ax, sel, title in (
         (axes[0], run.sel, "Vertical foot force (the foot F/T sensors)"),
@@ -665,6 +776,77 @@ def plot_feet(run):
     )
     run.note(f"foot force {run.during} (body weight {bw:.0f} N): {txt}")
     run.save(fig, "feet")
+    return True
+
+
+def plot_impact(run):
+    d = run.d
+    force = {"left": d.get("LeftFootForceSensor_fz"), "right": d.get("RightFootForceSensor_fz")}
+    if not need(*force.values()):
+        return False
+    bw = body_weight(run, force["left"] + force["right"])
+    ankles, source = ankle_positions(run)
+    win = max(1, int(round(IMPACT_WINDOW / run.dt)))
+    z0, z1 = zoom(run)
+    near = (run.t >= z0) & (run.t <= z1)
+    fig, ax = plt.subplot_mosaic(
+        [["velocity", "velocity"], ["force", "force"], ["before", "peak"]], figsize=(11, 9.5), constrained_layout=True
+    )
+    notes = []
+    for (side, fz), color in zip(force.items(), (BLUE, ORANGE)):
+        # Landings while tracking as in plot_feet, with two ticks before each for the velocity before touchdown
+        flag = d.get(f"NewRLQPController_{side}FootContact")
+        lands = np.array([a for a, b in contacts(fz, flag) if run.track[a] and b - a > 1 and a >= 2], int)
+        t_land, shown = run.t[lands], lands[near[lands]]
+        peak = np.array([fz[a : a + win].max() / bw for a in lands])
+        ax["force"].plot(run.t[near], fz[near] / bw, color=color, label=f"{side} foot")
+        ax["force"].plot(run.t[shown], fz[shown] / bw, "o", color=color, ms=4)
+        ax["peak"].plot(t_land, peak, "o", color=color, ms=4)
+        at_touchdown = comp(d, f"NewRLQPController_{side}FootImpactVel")
+        if at_touchdown is not None:
+            ax["before"].plot(t_land, at_touchdown[lands, 2], "o", mfc="none", mec=color, ms=6)
+        line = f"{side} {len(lands)} landings"
+        if ankles is not None:
+            z = ankles[side][:, 2]
+            vz = np.gradient(z, run.t)
+            # Over the last tick before the touchdown tick (a backward difference), so without contact force yet
+            before = (z[lands - 1] - z[lands - 2]) / (run.t[lands - 1] - run.t[lands - 2])
+            ax["velocity"].plot(run.t[near], vz[near], color=color, label=f"{side} ankle")
+            ax["velocity"].plot(run.t[shown], vz[shown], "o", color=color, ms=4)
+            ax["before"].plot(t_land, before, "o", color=color, ms=4)
+            if len(lands):
+                line += f", vertical velocity before touchdown median {np.median(before):.2f} m/s"
+                line += f" (fastest {before.min():.2f})"
+        if len(lands):
+            line += f", impact force median {np.median(peak):.2f} BW (largest {peak.max():.2f})"
+        notes.append(line)
+    if ankles is not None:
+        ax["velocity"].axhline(0.0, color=INK2, lw=0.8)
+        ax["velocity"].set_title(
+            f"Ankle vertical velocity (down < 0), from the {source} base pose and the encoders, {z0:.1f} to "
+            f"{z1:.1f} s. Dots: touchdowns"
+        )
+        ax["velocity"].legend(loc="upper right", ncol=2)
+    else:
+        ax["velocity"].text(0.5, 0.5, f"No ankle velocity: {source}", ha="center", transform=ax["velocity"].transAxes)
+    ax["velocity"].set_ylabel("[m/s]")
+    ax["force"].axhline(1.0, color=INK2, ls="--", lw=0.8)
+    ax["force"].set_title("Vertical foot force, same close-up. Dots: touchdowns")
+    ax["force"].set_ylabel("[body weights]")
+    ax["force"].set_xlabel("time [s]")
+    ax["force"].legend(loc="upper right", ncol=2)
+    ax["before"].set_title(
+        "Per landing: ankle vertical velocity. Dots: over the last tick\nbefore touchdown; rings: the controller's, "
+        "at the touchdown tick"
+    )
+    ax["before"].set_ylabel("[m/s]")
+    ax["peak"].set_title(f"Per landing: largest force in the first {1000 * IMPACT_WINDOW:.0f} ms after touchdown")
+    ax["peak"].set_ylabel("[body weights]")
+    for k in ("before", "peak"):
+        ax[k].set_xlabel("touchdown time [s] (colours as above)")
+    origin = f"ankle velocity from the {source} base pose" if ankles is not None else f"no ankle velocity ({source})"
+    run.note(f"impacts {run.during} ({origin}): " + "; ".join(notes))
+    run.save(fig, "impact")
     return True
 
 
@@ -819,6 +1001,7 @@ PLOTS = {
     "upper_body_torque": plot_upper_body_torque,
     "joint_error": plot_joint_error,
     "feet": plot_feet,
+    "impact": plot_impact,
     "torques": plot_torques,
     "imu": plot_imu,
     "timing": plot_timing,
@@ -831,7 +1014,8 @@ def main():
     parser.add_argument("log", nargs="?", help=f"mc_rtc .bin log (default: {LATEST} in {' or '.join(LOG_DIRS)})")
     parser.add_argument("--out", help="output folder (default: plots/<log name> beside the logs folder)")
     parser.add_argument("--window", nargs=2, type=float, metavar=("T0", "T1"), help="time window [s]")
-    parser.add_argument("--zoom", nargs=2, type=float, metavar=("T0", "T1"), help="feet close-up window [s]")
+    parser.add_argument("--zoom", nargs=2, type=float, metavar=("T0", "T1"), help="feet and impact close-up [s]")
+    parser.add_argument("--urdf", help="HRP5Pmain.urdf for the ankle velocities (default: from the mc_rtc install)")
     parser.add_argument("--only", help="comma-separated plots: " + ",".join(PLOTS))
     parser.add_argument("--list", action="store_true", help="print the log's entries and exit")
     args = parser.parse_args()
