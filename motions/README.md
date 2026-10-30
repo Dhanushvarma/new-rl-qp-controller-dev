@@ -12,9 +12,13 @@ move the arms through random poses that twist and roll the wrists oddly; their C
 `hrp5p_motion_tracking_deployment/motions_not_ready/` and come back in later stages (arm swing, then gestures). Their
 READMEs stay here as the record of their rates.
 
+**Stage 2, arm swing (30 Oct).** One walk with arm motion joins them: `walk_natural_swing/motion_walk_natural_swing_15s.csv`,
+the 15 s default-arm walk with a gentle arm swing at the shoulders and elbows; the wrists keep their stance angles.
+
 | Folder | Set | In the repository now |
 |---|---|---|
 | [walk_default_arms/](walk_default_arms/README.md) | straight walks at 0.15 m/s, arms kept in their default pose (no arm targets of ours), continuous or stop and go | all seven: continuous 15, 30, 45, 60 s; stop-and-go 30, 45, 60 s |
+| [walk_natural_swing/](walk_natural_swing/README.md) | the default-arm walks with an arm swing timed by the footsteps, wrists kept at their stance angles | the 15 s walk |
 | [clips/](clips/README.md) | cut from the 60 s trial motions, each ending standing: a 10 s stand, an 18 s and a 35 s clip | the 10 s stand |
 | [walk/](walk/README.md) | straight walks at 0.15 m/s, arms still in a raised "ready" pose | none (stage 1) |
 | [walk_swing/](walk_swing/README.md) | straight walks at 0.15 m/s with arm swings while walking | none (stage 1) |
