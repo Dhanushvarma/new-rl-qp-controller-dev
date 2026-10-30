@@ -1,7 +1,8 @@
 # walk_natural_swing: straight walks with a gentle arm swing
 
-> **Stage 2 (30 Oct, the user's request):** the 15 s walk is in the repository. The stop-and-go versions stay out for
-> now; their CSVs are kept in `hrp5p_motion_tracking_deployment/motions_not_ready/walk_natural_swing/`.
+> **Stage 2 (30 Oct, the user's request):** the 15 s walk and the 30 s stop-and-go walk are in the repository. The 45
+> and 60 s stop-and-go versions stay out for now; their CSVs are kept in
+> `hrp5p_motion_tracking_deployment/motions_not_ready/walk_natural_swing/`.
 
 Made for deployment with the BaselineWalkingController generator (private `Dhanushvarma/hrp5p_mc_rtc_motions`, branch
 `topic/footstep-swing`, configs `motions/walk_natural_swing_*.yaml`, options `arms: hold_start` and `footstep_swing`).
@@ -21,7 +22,7 @@ Arm joints, from the CSVs:
 | File | Length | Walk | In the repo |
 |---|---|---|---|
 | `motion_walk_natural_swing_15s.csv` | 15 s | about 0.8 m, continuous | yes |
-| `motion_walk_natural_swing_stops_30s.csv` | 30 s | about 1.6 m in 2 legs | no |
+| `motion_walk_natural_swing_stops_30s.csv` | 30 s | about 1.6 m in 2 legs | yes |
 | `motion_walk_natural_swing_stops_45s.csv` | 45 s | about 2.3 m in 3 legs | no |
 | `motion_walk_natural_swing_stops_60s.csv` | 60 s | about 3.1 m in 4 legs | no |
 
@@ -33,7 +34,7 @@ Method: [../README.md](../README.md#failure-rates). P9 measured on 24 Oct 2026, 
 | Motion | mjlab P13 | mjlab P15 / P17 / P9 | mc_mujoco P13 (est) | Torso error, P13 / P15 / P17 (est) | Robot (P13 in slot 3) |
 |---|---|---|---|---|---|
 | 15 s | 0 / 64 | 0 / 0 / 0 | no fall | 0.038 / 0.027 / 0.020 m | ready |
-| stops 30 s | 0 / 64 | 0 / 0 / 0 | no fall | 0.057 / 0.035 / 0.028 m | not in the repo |
+| stops 30 s | 0 / 64 | 0 / 0 / 0 | no fall | 0.057 / 0.035 / 0.028 m | ready |
 | stops 45 s | 0 / 64 | 0 / 0 / 0 | no fall | 0.071 / 0.041 / 0.033 m | not in the repo |
 | stops 60 s | 0 / 64 | 0 / 0 / 0 | no fall | 0.086 / 0.045 / 0.037 m | not in the repo |
 
