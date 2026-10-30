@@ -131,7 +131,10 @@ python3 tools/plot_mc_log.py LOG.bin --list                    # the log's entri
 - Without a path it takes `mc-control-NewRLQPController-latest.bin` from `~/workspace/runs/logs` or `/tmp`.
 - The plots go to `plots/<log name>/` beside the logs folder, with a `summary.txt`. The script's docstring lists them:
   the tracking overview, the torso path, joint angles and torques over time, the joint tracking error, foot forces,
-  per-joint torque peaks, the IMU, controller timing and the policy action.
+  foot impacts, per-joint torque peaks, the IMU, controller timing and the policy action.
+- `impact` shows each ankle's vertical velocity and each foot's force around touchdowns, and per landing the velocity
+  just before touchdown and the largest force in the first 100 ms. The ankle velocity comes from the base pose and the
+  encoders through `HRP5Pmain.urdf`, found in the mc_rtc install (or `--urdf PATH`).
 - On the robot `tauIn` holds the motor currents, so the torque plots are in A, not N m.
 
 ## Tests
