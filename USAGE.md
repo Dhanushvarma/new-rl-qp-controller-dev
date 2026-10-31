@@ -30,17 +30,16 @@ cmake --install build
 | 0 | `push7.onnx` | velocity (joystick) |
 | 1 | `angmom.onnx` | velocity (joystick) |
 | 2 | `push11.onnx` | velocity (joystick) |
-| 3 | `tracking/P13_21994/policy.onnx` | whole-body motion tracking |
-| 4 | `tracking/P15_22993/policy.onnx` | whole-body motion tracking, second choice (slot 3's settings) |
+| 3 | `tracking/P21_23992/policy.onnx` | whole-body motion tracking, the softest landings |
+| 4 | `tracking/P15_22993/policy.onnx` | whole-body motion tracking, the most robust (slot 3's settings) |
 | 5 | `tracking/P17_23992/policy.onnx` | whole-body motion tracking, the gentlest (slot 3's settings) |
-| 6 | `tracking/P21_23992/policy.onnx` | whole-body motion tracking, the softest landings (slot 3's settings) |
 
 ## Track a motion (slot 3)
 
 In the GUI, under `NewRLQPController`:
 
-1. `Policy` → `Policy index (disarm to change)`: 3 (P13), 4 (P15, the second choice), 5 (P17, the gentlest) or 6 (P21,
-   the softest landings).
+1. `Policy` → `Policy index (disarm to change)`: 3 (P21, the softest landings), 4 (P15, the most robust) or 5 (P17, the
+   gentlest).
 2. `Tracking` → `Motion (disarm to change)`: pick a motion, listed by set folder (e.g.
    `clips/motion_stand_seed104_10s.csv`). The default is the 10 s stand. `Rescan motions directory` finds files added
    since the start.
@@ -107,7 +106,7 @@ Where to change them:
 1. Export the policy with mjlab's `scripts/hrp5p/export_deploy.py`. It writes `policy.onnx` and `policy.yaml`.
 2. Copy the ONNX to `policy/tracking/<name>/policy.onnx` and point slot 3 of `policy_path` at it.
 3. Check slot 3 against the export's `policy.yaml`: `action_scale`, `q0`, `kp`, `kd`, `ref_joint_order` and the
-   `tracking` section. P6 final, P8, P9, P11 and P13 share these values.
+   `tracking` section. P6 final, P8, P9, P11, P13, P15, P17 and P21 share these values.
 4. Rebuild and install.
 
 ## Logs

@@ -24,7 +24,7 @@ Two kinds:
 
 Method: [../README.md](../README.md#failure-rates). P9 measured on 23-24 Oct 2026, P11 on 24 Oct, P13 on 25 Oct.
 
-| Motion | mjlab P13 | mjlab P11 / P9 | mc_mujoco P13 (est, gt) | Torso error, P13 / P11 / P9 (est) | Robot (P13 in slot 3) |
+| Motion | mjlab P13 | mjlab P11 / P9 | mc_mujoco P13 (est, gt) | Torso error, P13 / P11 / P9 (est) | Robot (slot 3) |
 |---|---|---|---|---|---|
 | 15 s | 0 / 64 | 0 / 0 | no fall, no fall | 0.039 / 0.041 / 0.062 m | ready |
 | 30 s | 0 / 64 | 0 / 1 | no fall, no fall | 0.066 / 0.084 / 0.123 m | ready |
@@ -36,15 +36,15 @@ Method: [../README.md](../README.md#failure-rates). P9 measured on 23-24 Oct 202
 
 P11 and P9 had no fall in mc_mujoco (est and gt) on all seven either.
 
+**Slot 3 (P21, 31 Oct):** 0 / 64 in mjlab and no fall in mc_mujoco (est, gt) on all seven: ready. Torso error
+(est): 15 s 0.027 m; continuous 30 / 45 / 60 s 0.073 / 0.099 / 0.114 m; stops 30 / 45 / 60 s 0.035 / 0.049 / 0.065 m.
+
 **Slot 4 (P15, 26 Oct):** 0 / 64 in mjlab and no fall in mc_mujoco (est, gt) on all seven: ready. Torso error
 (est): 15 s 0.031 m; continuous 30 / 45 / 60 s 0.061 / 0.079 / 0.107 m; stops 30 / 45 / 60 s 0.042 / 0.049 / 0.054 m.
 
 **Slot 5 (P17, 27 Oct):** 0 / 64 in mjlab and no fall in mc_mujoco (est, gt) on all seven: ready. Torso error
 (est): 15 s 0.018 m; continuous 30 / 45 / 60 s 0.034 / 0.047 / 0.063 m; stops 30 / 45 / 60 s 0.022 / 0.026 / 0.029 m,
 the closest of the three slots; the wrists are held up to 0.1 rad further from their orientation than with P15.
-
-**Slot 6 (P21, 31 Oct):** 0 / 64 in mjlab and no fall in mc_mujoco (est, gt) on all seven: ready. Torso error
-(est): 15 s 0.027 m; continuous 30 / 45 / 60 s 0.073 / 0.099 / 0.114 m; stops 30 / 45 / 60 s 0.035 / 0.049 / 0.065 m.
 
 The continuous 30, 45 and 60 s walks were left out while P9 was in slot 3 (1, 11 and 14 of 64 fell in mjlab, after
 long continuous walking). P11, trained with such walks, tracks all seven without a fall, so they are back in the

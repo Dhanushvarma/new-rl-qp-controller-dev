@@ -21,7 +21,7 @@ Method: [../README.md](../README.md#failure-rates). P9 on 23 Oct, P11 on 24 Oct 
 over the five motions (51 to 82 each), so the counts are falls out of the robots that ran that motion. P8 on 22 Oct: 128
 robots over the five, about 26 each.
 
-| Motion | In the repo | mjlab P13 | mjlab P11 / P9 | mjlab P8 | mc_mujoco P9 (est, gt) | Robot (P13 in slot 3) |
+| Motion | In the repo | mjlab P13 | mjlab P11 / P9 | mjlab P8 | mc_mujoco P9 (est, gt) | Robot (slot 3) |
 |---|---|---|---|---|---|---|
 | seed010 | no (stage 1) | 0 / 63 | 0 / 0 | 2 falls | no fall, no fall (torso error 0.105 / 0.110 m) | not in stage 1 |
 | seed060 | no | 1 / 51 | 1 / 2 | 4 falls | not run | not in stage 1 |
@@ -31,13 +31,13 @@ robots over the five, about 26 each.
 
 mc_mujoco P11 and P13 not run on these.
 
+**Slot 3 (P21, 31 Oct):** mjlab 0 / 63, 2 / 51, 0 / 56, 0 / 82, 0 / 68 (seeds 010, 060, 062, 084, 104); mc_mujoco not
+run.
+
 **Slot 4 (P15, 26 Oct):** mjlab 2 / 63, 0 / 51, 0 / 56, 0 / 82, 1 / 68 (seeds 010, 060, 062, 084, 104); mc_mujoco not
 run.
 
 **Slot 5 (P17, 27 Oct):** mjlab 0 / 63, 0 / 51, 0 / 56, 0 / 82, 0 / 68 (seeds 010, 060, 062, 084, 104); mc_mujoco not
-run.
-
-**Slot 6 (P21, 31 Oct):** mjlab 0 / 63, 2 / 51, 0 / 56, 0 / 82, 0 / 68 (seeds 010, 060, 062, 084, 104); mc_mujoco not
 run.
 
 Left out of the repository (falls in mjlab): seeds 060, 062, 084 and 104, kept in
