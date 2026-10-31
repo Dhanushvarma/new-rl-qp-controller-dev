@@ -31,7 +31,7 @@ Arm joints, from the CSVs:
 Method: [../README.md](../README.md#failure-rates). P9 measured on 24 Oct 2026, P13 on 25 Oct, P15 on 26 Oct, P17 on
 27 Oct, P21 on 31 Oct.
 
-| Motion | mjlab P13 | mjlab P15 / P17 / P21 / P9 | mc_mujoco P13 (est) | Torso error, P13 / P15 / P17 / P21 (est) | Robot (P13 in slot 3) |
+| Motion | mjlab P13 | mjlab P15 / P17 / P21 / P9 | mc_mujoco P13 (est) | Torso error, P13 / P15 / P17 / P21 (est) | Robot (slot 3) |
 |---|---|---|---|---|---|
 | 15 s | 0 / 64 | 0 / 0 / 0 / 0 | no fall | 0.038 / 0.027 / 0.020 / 0.023 m | ready |
 | stops 30 s | 0 / 64 | 0 / 0 / 0 / 0 | no fall | 0.057 / 0.035 / 0.028 / 0.029 m | ready |

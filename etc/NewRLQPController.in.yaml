@@ -118,11 +118,12 @@ policy_path: [
   # action_scale que push7 (metadonnees de l'onnx et bloc actions du env.yaml
   # identiques), meme chaine iob / PostureTask a l'entrainement.
   "@RL_POLICY_INSTALL_PREFIX@/push11.onnx",
-  # index 3: P13, whole-body motion tracking (see its slot below). P11's file
-  # stays in tracking/P11_19996/ (the previous slot 3), P9's and P8's in
-  # tracking/P9_18997/ and tracking/P8_17998/, P6 final's in tracking/P6_final/
-  # (the tracking tests' golden policy).
-  "@RL_POLICY_INSTALL_PREFIX@/tracking/P13_21994/policy.onnx",
+  # index 3: P21, whole-body motion tracking (see its slot below). P13's file
+  # stays in tracking/P13_21994/ (slot 3 from 25 to 31 Oct), P11's in
+  # tracking/P11_19996/, P9's and P8's in tracking/P9_18997/ and
+  # tracking/P8_17998/, P6 final's in tracking/P6_final/ (the tracking tests'
+  # golden policy).
+  "@RL_POLICY_INSTALL_PREFIX@/tracking/P21_23992/policy.onnx",
   # index 4: P15, the second motion tracking slot (see below), with slot 3's
   # settings: P13 fine-tuned with penalties on servo torque requests near the
   # limits and on joint accelerations, its exploration noise lowered.
@@ -130,15 +131,11 @@ policy_path: [
   # index 5: P17, the third motion tracking slot (see below), with slot 3's
   # settings: P15 fine-tuned with both penalties doubled, the gentlest.
   "@RL_POLICY_INSTALL_PREFIX@/tracking/P17_23992/policy.onnx",
-  # index 6: P21, the fourth motion tracking slot (see below), with slot 3's
-  # settings: P15 fine-tuned with a reward on the upper body's vertical speed,
-  # the softest landings.
-  "@RL_POLICY_INSTALL_PREFIX@/tracking/P21_23992/policy.onnx",
 ]
 # Exige MainRobot: HRP5P dans mc_rtc.yaml (module mc_hrp5_p).
-# 3 to 6 = the motion tracking slots (P13; P15, the second choice; P17, the
-# gentlest; P21, the softest landings): select one from the GUI while disarmed,
-# or set it here.
+# 3, 4 and 5 = the motion tracking slots (P21, the softest landings; P15, the
+# most robust; P17, the gentlest): select one from the GUI while disarmed, or set
+# it here.
 default_policy_index: 0
 
 # Replay en boucle fermee (SIMULATION SEULEMENT, refuse sous RobotHardware) :
@@ -551,22 +548,29 @@ policies:
   # index 2 : push11 -- memes reglages que push7 (index 0).
   - *hrp5p_push_family
 
-  # index 3: P13, whole-body motion tracking (mjlab BeyondMimic-style): P11
-  # (P9 plus long straight walks and default-arm walks; P9 is P8 at the
-  # robot's 5 ms tick; P8 is P6 final fine-tuned through mjlab's model of this
-  # posture chain: PostureTask, kinematic QP with the joint-limit damper, the
-  # robot's servos, a 0-10 ms command delay, servo gains randomized) fine-tuned
-  # 2 x 1000 more iterations on the same motions with adaptive sampling that
-  # practises more where robots fall (P12: failure-weighted motion picks; P13:
-  # the within-motion bins rescaled). Checkpoint mjlab_link_tracking
-  # hrp5p_tracking 2026-10-24_20-11-42_P13_adaptfloor_ft_from_P12/
-  # model_21994.pt, task Mjlab-Tracking-Flat-HRP5P-Posture5ms-Delay0to10ms-
-  # ServoGains-MultiMotion-WristOri-PathCutoff-JointPos-SwingHeight-JointVel-
-  # LegJointPos-FootOri-ActionFilter-StanceSlip. Same observation, action and
-  # gains as P6 final. In that model at the 5 ms tick, over whole motions, no
-  # robot of 64 falls on the stand or any default-arm walk, 31 of 512 on the
-  # training motions (P11: 93) and 2 of 128 on the held-out ones (P11: 20);
-  # per-motion rates are in each motions folder's README.
+  # index 3: P21, whole-body motion tracking (mjlab BeyondMimic-style): P15
+  # (slot 4) fine-tuned 1000 more iterations with the joint velocity reward's
+  # kernel widened and a reward on the upper body's vertical speed following
+  # the reference's. P15 is P13 fine-tuned with penalties on servo torque
+  # requests near the limits and on joint accelerations, the entropy bonus off;
+  # P13 is P11 fine-tuned with adaptive sampling that practises more where
+  # robots fall; P11 is P9 plus long straight walks and default-arm walks; P9
+  # is P8 at the robot's 5 ms tick; P8 is P6 final fine-tuned through mjlab's
+  # model of this posture chain (PostureTask, kinematic QP with the joint-limit
+  # damper, the robot's servos, a 0-10 ms command delay, servo gains
+  # randomized). Checkpoint mjlab_link_tracking hrp5p_tracking
+  # 2026-10-30_19-12-21_P21_upperbodyvz_cont_from_P15/model_23992.pt, task
+  # Mjlab-Tracking-Flat-HRP5P-Posture5ms-Delay0to10ms-ServoGains-MultiMotion-
+  # WristOri-PathCutoff-JointPos-SwingHeight-JointVel-LegJointPos-FootOri-
+  # ActionFilter-StanceSlip-ActuatorLimits-JointVelWide-UpperBodyVz. Same
+  # observation, action and gains as P6 final. In that model at the 5 ms tick,
+  # over whole motions, no robot of 64 falls on the stand, any default-arm walk
+  # or any natural-swing walk, 19 of 512 on the training motions and 4 of 128
+  # on the held-out ones. The softest landings: through this controller its
+  # stance force peaks are the lowest of the slots and its upper body bobs about
+  # as little as the reference's; in simulation it falls about twice as often as
+  # P15 on long walks with the arms held raised, which no stage uses yet.
+  # Per-motion rates are in each motions folder's README.
   # MotionTracker (src/MotionTracker.h) runs it: ARM ramps (min-jerk) from the
   # held posture to the selected motion's first frame, settles, then tracks
   # from frame 0; HOLD freezes the posture target at the last command.
@@ -797,19 +801,6 @@ policies:
   # 3 times rarer than P15's; it holds the torso closest to the reference but
   # the wrists further off in orientation, and recovers from pushes less well
   # in simulation; per-motion rates in the motions READMEs.
-  - *hrp5p_tracking_slot
-
-  # index 6: P21, the fourth whole-body motion tracking slot: P15 fine-tuned
-  # 1000 iterations with the joint velocity reward's kernel widened and a reward
-  # on the upper body's vertical speed following the reference's, the entropy
-  # bonus still off (mjlab_link_tracking hrp5p_tracking
-  # 2026-10-30_19-12-21_P21_upperbodyvz_cont_from_P15/model_23992.pt). Slot 3's
-  # observation, action, gains and tracking settings (export checked). The
-  # softest landings: through this controller its stance force peaks are the
-  # lowest of the slots and its upper body bobs about as little as the
-  # reference; in simulation it falls about twice as often as P15 on long walks
-  # with the arms held raised, which no stage uses yet; per-motion rates in the
-  # motions READMEs.
   - *hrp5p_tracking_slot
 
 use_async_inference: false

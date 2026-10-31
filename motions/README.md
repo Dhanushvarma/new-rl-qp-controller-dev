@@ -42,25 +42,24 @@ the repository; the others stay listed in their folder's README with their rates
 `hrp5p_motion_tracking_deployment/motions_not_ready/`), so the GUI never offers one.
 
 **Policies.**
-- Slot 3 runs **P13** (`policy/tracking/P13_21994`, 25 Oct): P11 fine-tuned with adaptive sampling that practises
-  more where robots fall.
-- Slot 4 runs **P15** (`policy/tracking/P15_22993`, 26 Oct), the second choice with slot 3's settings: P13 fine-tuned
+- Slot 3 runs **P21** (`policy/tracking/P21_23992`, 31 Oct), the softest landings: P15 (slot 4) fine-tuned
+  with a reward on the upper body's vertical speed following the reference's. Each folder's README gives its
+  rates under "Slot 3"; it is ready on every motion in the repository. Through this controller its stance force
+  peaks are the lowest of the slots (p90 1.27 body weights, P15 1.57) and its upper body bobs about as little as the
+  reference's; in simulation it falls about twice as often as P15 on long walks with the arms held raised (no stage
+  uses them yet) and recovers from strong pushes less well, and it holds the left elbow about 0.25 rad off its
+  reference.
+- Slot 4 runs **P15** (`policy/tracking/P15_22993`, 26 Oct), the most robust, with slot 3's settings: P13 fine-tuned
   with penalties on servo torque requests near the limits and on joint accelerations. Each folder's README gives its
   rates under "Slot 4"; it is ready on every motion in the repository too.
 - Slot 5 runs **P17** (`policy/tracking/P17_23992`, 27 Oct), the gentlest, with slot 3's settings: P15 fine-tuned
   with both penalties doubled. Each folder's README gives its rates under "Slot 5"; it is ready on every motion in the
   repository too, though in simulation it recovers from pushes less well than P15 and falls more when the command
   delay is longer than the 10 ms of the checks (60 s continuous walk at 20 / 30 ms: 5 and 10 of 64, P15 0 and 1).
-- Slot 6 runs **P21** (`policy/tracking/P21_23992`, 31 Oct), the softest landings, with slot 3's settings: P15
-  fine-tuned with a reward on the upper body's vertical speed following the reference's. Each folder's README gives its
-  rates under "Slot 6"; it is ready on every motion in the repository too. Through this controller its stance force
-  peaks are the lowest of the slots (p90 1.27 body weights, P15 1.57) and its upper body bobs about as little as the
-  reference's; in simulation it falls about twice as often as P15 on long walks with the arms held raised (no stage
-  uses them yet) and recovers from strong pushes less well, and it holds the left elbow about 0.25 rad off its
-  reference.
-- **P11** (`policy/tracking/P11_19996`, P9 plus long straight walks and default-arm walks), **P9**
-  (`policy/tracking/P9_18997`, P8 at the robot's 5 ms tick) and **P8** (`policy/tracking/P8_17998`) ran in slot 3
-  before; their rates are kept for comparison.
+- **P13** (`policy/tracking/P13_21994`, slot 3 from 25 to 31 Oct: P11 fine-tuned with adaptive sampling that
+  practises more where robots fall), **P11** (`policy/tracking/P11_19996`, P9 plus long straight walks and default-arm
+  walks), **P9** (`policy/tracking/P9_18997`, P8 at the robot's 5 ms tick) and **P8** (`policy/tracking/P8_17998`) ran
+  in slot 3 before; their rates are kept for comparison.
 
 ## Format
 

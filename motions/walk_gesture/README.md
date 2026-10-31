@@ -22,7 +22,7 @@ hands do not move. Heading within 1.7°, sideways drift within 0.09 m. No turns.
 Method: [../README.md](../README.md#failure-rates). P8 and P9 measured on 23 Oct 2026, P11 on 24 Oct, P13 on 25 Oct.
 mjlab P8 not measured.
 
-| Motion | mjlab P13 | mjlab P11 / P9 | mc_mujoco P13 (est) | Torso error, P13 / P11 / P9 (est) | Robot (P13 in slot 3) |
+| Motion | mjlab P13 | mjlab P11 / P9 | mc_mujoco P13 (est) | Torso error, P13 / P11 / P9 (est) | Robot (slot 3) |
 |---|---|---|---|---|---|
 | 15 s | 0 / 64 | 0 / 0 | no fall | 0.017 / 0.019 / 0.029 m | not in stage 1 |
 | 30 s | 0 / 64 | 0 / 0 | no fall | 0.076 / 0.114 / 0.091 m | not in stage 1 |
@@ -31,13 +31,13 @@ mjlab P8 not measured.
 
 mc_mujoco, earlier slot-3 policies: P11 no fall (est); P9 and P8 no fall (est and gt) on all four.
 
+**Slot 3 (P21, 31 Oct):** mjlab 0 / 64 on all four; mc_mujoco no fall (est; torso error 0.030 / 0.099 / 0.126 /
+0.134 m).
+
 **Slot 4 (P15, 26 Oct):** mjlab 0 / 64 on all four; mc_mujoco no fall (est; torso error 0.019 / 0.082 / 0.105 /
 0.115 m).
 
 **Slot 5 (P17, 27 Oct):** mjlab 0 / 1 / 1 / 2 of 64 (15, 30, 45, 60 s); mc_mujoco no fall (est; torso error 0.015 /
 0.071 / 0.100 / 0.121 m).
-
-**Slot 6 (P21, 31 Oct):** mjlab 0 / 64 on all four; mc_mujoco no fall (est; torso error 0.030 / 0.099 / 0.126 /
-0.134 m).
 
 The walking comes in short legs with stops, which they all handle; P11 had 2 falls in 64 on the 60 s motion.
