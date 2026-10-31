@@ -43,6 +43,9 @@ P11 and P9 had no fall in mc_mujoco (est and gt) on all seven either.
 (est): 15 s 0.018 m; continuous 30 / 45 / 60 s 0.034 / 0.047 / 0.063 m; stops 30 / 45 / 60 s 0.022 / 0.026 / 0.029 m,
 the closest of the three slots; the wrists are held up to 0.1 rad further from their orientation than with P15.
 
+**Slot 6 (P21, 31 Oct):** 0 / 64 in mjlab and no fall in mc_mujoco (est, gt) on all seven: ready. Torso error
+(est): 15 s 0.027 m; continuous 30 / 45 / 60 s 0.073 / 0.099 / 0.114 m; stops 30 / 45 / 60 s 0.035 / 0.049 / 0.065 m.
+
 The continuous 30, 45 and 60 s walks were left out while P9 was in slot 3 (1, 11 and 14 of 64 fell in mjlab, after
 long continuous walking). P11, trained with such walks, tracks all seven without a fall, so they are back in the
 repository since 24 Oct; P13 does too, and with the MCWaiko estimate it drifts least on the continuous ones. On the

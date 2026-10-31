@@ -33,12 +33,14 @@ cmake --install build
 | 3 | `tracking/P13_21994/policy.onnx` | whole-body motion tracking |
 | 4 | `tracking/P15_22993/policy.onnx` | whole-body motion tracking, second choice (slot 3's settings) |
 | 5 | `tracking/P17_23992/policy.onnx` | whole-body motion tracking, the gentlest (slot 3's settings) |
+| 6 | `tracking/P21_23992/policy.onnx` | whole-body motion tracking, the softest landings (slot 3's settings) |
 
 ## Track a motion (slot 3)
 
 In the GUI, under `NewRLQPController`:
 
-1. `Policy` → `Policy index (disarm to change)`: 3 (P13), 4 (P15, the second choice) or 5 (P17, the gentlest).
+1. `Policy` → `Policy index (disarm to change)`: 3 (P13), 4 (P15, the second choice), 5 (P17, the gentlest) or 6 (P21,
+   the softest landings).
 2. `Tracking` → `Motion (disarm to change)`: pick a motion, listed by set folder (e.g.
    `clips/motion_stand_seed104_10s.csv`). The default is the 10 s stand. `Rescan motions directory` finds files added
    since the start.

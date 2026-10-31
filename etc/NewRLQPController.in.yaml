@@ -130,10 +130,15 @@ policy_path: [
   # index 5: P17, the third motion tracking slot (see below), with slot 3's
   # settings: P15 fine-tuned with both penalties doubled, the gentlest.
   "@RL_POLICY_INSTALL_PREFIX@/tracking/P17_23992/policy.onnx",
+  # index 6: P21, the fourth motion tracking slot (see below), with slot 3's
+  # settings: P15 fine-tuned with a reward on the upper body's vertical speed,
+  # the softest landings.
+  "@RL_POLICY_INSTALL_PREFIX@/tracking/P21_23992/policy.onnx",
 ]
 # Exige MainRobot: HRP5P dans mc_rtc.yaml (module mc_hrp5_p).
-# 3, 4 and 5 = the motion tracking slots (P13; P15, the second choice; P17,
-# the gentlest): select one from the GUI while disarmed, or set it here.
+# 3 to 6 = the motion tracking slots (P13; P15, the second choice; P17, the
+# gentlest; P21, the softest landings): select one from the GUI while disarmed,
+# or set it here.
 default_policy_index: 0
 
 # Replay en boucle fermee (SIMULATION SEULEMENT, refuse sous RobotHardware) :
@@ -792,6 +797,19 @@ policies:
   # 3 times rarer than P15's; it holds the torso closest to the reference but
   # the wrists further off in orientation, and recovers from pushes less well
   # in simulation; per-motion rates in the motions READMEs.
+  - *hrp5p_tracking_slot
+
+  # index 6: P21, the fourth whole-body motion tracking slot: P15 fine-tuned
+  # 1000 iterations with the joint velocity reward's kernel widened and a reward
+  # on the upper body's vertical speed following the reference's, the entropy
+  # bonus still off (mjlab_link_tracking hrp5p_tracking
+  # 2026-10-30_19-12-21_P21_upperbodyvz_cont_from_P15/model_23992.pt). Slot 3's
+  # observation, action, gains and tracking settings (export checked). The
+  # softest landings: through this controller its stance force peaks are the
+  # lowest of the slots and its upper body bobs about as little as the
+  # reference; in simulation it falls about twice as often as P15 on long walks
+  # with the arms held raised, which no stage uses yet; per-motion rates in the
+  # motions READMEs.
   - *hrp5p_tracking_slot
 
 use_async_inference: false

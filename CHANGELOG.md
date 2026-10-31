@@ -58,6 +58,12 @@ The safety branch held the four safety commits (`e302aeb` to `c160847`) for revi
   stage-1 motion and holds the torso closest to the reference through the controller; it tracks the wrists'
   orientation less closely and, in simulation, recovers from pushes less well and falls more when the command delay
   is longer than the 10 ms of the checks (60 s continuous walk at 20 / 30 ms: 5 and 10 of 64, P15 0 and 1).
+- Slot 6: a fourth motion tracking slot, P21, with slot 3's settings. P21 is P15 fine-tuned with the joint velocity
+  reward's kernel widened and a reward on the upper body's vertical speed following the reference's: the softest
+  landings (through this controller its stance force peaks are the lowest of the slots, p90 1.27 body weights, P15
+  1.57) and an upper body that bobs about as little as the reference's. It passes every stage-1 and stage-2 motion;
+  in simulation it falls about twice as often as P15 on long walks with the arms held raised, which no stage uses yet,
+  and recovers from strong pushes less well.
 - `17633ec`: slot 3's default motion is the 10 s stand.
 - Motion sets: the motions directory has one folder per set (`clips/`, `full_60s/`, ...), each with a README of what
   its motions do and their failure rates in simulation. The tracker lists the CSVs of the subfolders by their path
