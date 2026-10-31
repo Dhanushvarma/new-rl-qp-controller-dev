@@ -29,16 +29,16 @@ Arm joints, from the CSVs:
 ## Failure rates
 
 Method: [../README.md](../README.md#failure-rates). P9 measured on 24 Oct 2026, P13 on 25 Oct, P15 on 26 Oct, P17 on
-27 Oct.
+27 Oct, P21 on 31 Oct.
 
-| Motion | mjlab P13 | mjlab P15 / P17 / P9 | mc_mujoco P13 (est) | Torso error, P13 / P15 / P17 (est) | Robot (P13 in slot 3) |
+| Motion | mjlab P13 | mjlab P15 / P17 / P21 / P9 | mc_mujoco P13 (est) | Torso error, P13 / P15 / P17 / P21 (est) | Robot (P13 in slot 3) |
 |---|---|---|---|---|---|
-| 15 s | 0 / 64 | 0 / 0 / 0 | no fall | 0.038 / 0.027 / 0.020 m | ready |
-| stops 30 s | 0 / 64 | 0 / 0 / 0 | no fall | 0.057 / 0.035 / 0.028 m | ready |
-| stops 45 s | 0 / 64 | 0 / 0 / 0 | no fall | 0.071 / 0.041 / 0.033 m | not in the repo |
-| stops 60 s | 0 / 64 | 0 / 0 / 0 | no fall | 0.086 / 0.045 / 0.037 m | not in the repo |
+| 15 s | 0 / 64 | 0 / 0 / 0 / 0 | no fall | 0.038 / 0.027 / 0.020 / 0.023 m | ready |
+| stops 30 s | 0 / 64 | 0 / 0 / 0 / 0 | no fall | 0.057 / 0.035 / 0.028 / 0.029 m | ready |
+| stops 45 s | 0 / 64 | 0 / 0 / 0 / 0 | no fall | 0.071 / 0.041 / 0.033 / 0.043 m | not in the repo |
+| stops 60 s | 0 / 64 | 0 / 0 / 0 / 0 | no fall | 0.086 / 0.045 / 0.037 / 0.058 m | not in the repo |
 
-mc_mujoco: P15 and P17 no fall (est) on all four; P9 no fall (est and gt) on all four.
+mc_mujoco: P15, P17 and P21 no fall (est) on all four; P9 no fall (est and gt) on all four.
 
 **The arms follow the swing only partly.** The policies swing their arms their own way while walking, even on the
 default-arm walks (P15: shoulder and elbow 0.10-0.14 rad peak to peak there). On the 15 s motion, in mjlab from 4 to
@@ -47,4 +47,6 @@ default-arm walks (P15: shoulder and elbow 0.10-0.14 rad peak to peak there). On
   0.11-0.15 rad);
 - P13 follows both shoulders and the right elbow (0.78-0.84), but swings its left arm about twice as much, the left
   elbow (0.37 rad) unrelated to the reference;
-- P17 follows with correlation 0.50-0.89.
+- P17 follows with correlation 0.50-0.89;
+- P21 follows with correlation 0.46-0.91 and swings them 0.17-0.27 rad peak to peak, its left elbow held about 0.25 rad
+  off the reference (as on the default-arm walks).

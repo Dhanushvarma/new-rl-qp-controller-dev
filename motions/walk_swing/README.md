@@ -40,6 +40,9 @@ the run logs; the 23 Oct table had read these runs as plain "no fall". P13 does 
 **Slot 5 (P17, 27 Oct):** mjlab 0 / 0 / 0 / 2 of 64; mc_mujoco no fall and no guard trip (est; torso error 0.034 /
 0.138 / 0.243 / 0.339 m).
 
+**Slot 6 (P21, 31 Oct):** mjlab 0 / 0 / 0 / 9 of 64; mc_mujoco no fall and no guard trip (est; torso error 0.037 /
+0.153 / 0.197 / 0.177 m).
+
 Left out of the repository (falls in mjlab): the 45 and 60 s motions, kept in
 `hrp5p_motion_tracking_deployment/motions_not_ready/walk_swing/`. As with the plain walks, the falls come with long
 continuous walking.
