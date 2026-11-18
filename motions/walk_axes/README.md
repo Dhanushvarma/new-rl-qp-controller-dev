@@ -1,7 +1,7 @@
 # walk_axes: walking along one axis or turning in place, arms in their default pose
 
 Made for the robot test of 19 Nov 2026 with the BaselineWalkingController generator (private
-`Dhanushvarma/hrp5p_mc_rtc_motions`, branch `topic/deploy-motion-sets`, configs `motions/walk_axes_*.yaml`, option
+`Dhanushvarma/hrp5p_mc_rtc_motions`, branch `topic/footstep-swing`, configs `motions/walk_axes_*.yaml`, option
 `arms: hold_start`). Each motion:
 - stands 3 s;
 - walks from 3 s to 18 s at one constant command;
