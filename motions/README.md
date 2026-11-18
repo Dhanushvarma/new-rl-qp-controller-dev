@@ -16,10 +16,15 @@ READMEs stay here as the record of their rates.
 `walk_natural_swing/`: the default-arm walks with a gentle arm swing at the shoulders and elbows; the wrists keep their
 stance angles.
 
+**Robot test, 19 Nov.** `walk_axes/` holds simple motions for a ±3 m × ±2 m test area: 15 s of walking forward,
+backward or sideways, or a turn in place, each at one constant command in the middle of the training range, arms in
+their default pose.
+
 | Folder | Set | In the repository now |
 |---|---|---|
 | [walk_default_arms/](walk_default_arms/README.md) | straight walks at 0.15 m/s, arms kept in their default pose (no arm targets of ours), continuous or stop and go | all seven: continuous 15, 30, 45, 60 s; stop-and-go 30, 45, 60 s |
 | [walk_natural_swing/](walk_natural_swing/README.md) | the default-arm walks with an arm swing timed by the footsteps, wrists kept at their stance angles | the 15 s walk and the 30 s stop-and-go walk |
+| [walk_axes/](walk_axes/README.md) | 15 s of walking forward, backward, sideways left or right, or turning in place, at one constant command, arms in their default pose | all six, 24 s each |
 | [clips/](clips/README.md) | cut from the 60 s trial motions, each ending standing: a 10 s stand, an 18 s and a 35 s clip | the 10 s stand |
 | [walk/](walk/README.md) | straight walks at 0.15 m/s, arms still in a raised "ready" pose | none (stage 1) |
 | [walk_swing/](walk_swing/README.md) | straight walks at 0.15 m/s with arm swings while walking | none (stage 1) |
