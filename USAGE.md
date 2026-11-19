@@ -11,8 +11,8 @@ Install it into a folder of its own, next to the `hrp5p` branch's build of the s
 cmake -B build -DCMAKE_INSTALL_PREFIX=$HOME/nrq-tracking -DMC_RTC_HONOR_INSTALL_PREFIX=ON -DCMAKE_BUILD_TYPE=RelWithDebInfo
 cmake --build build -j
 cmake --install build
-LD_LIBRARY_PATH=$HOME/nrq-tracking/lib ldd $HOME/nrq-tracking/lib/mc_controller/NewRLQPController_controller.so \
-  | grep "not found"   # prints nothing
+LD_LIBRARY_PATH=$HOME/nrq-tracking/lib:$LD_LIBRARY_PATH ldd $HOME/nrq-tracking/lib/mc_controller/NewRLQPController_controller.so \
+  | grep "not found"   # prints nothing, in a shell with mc_rtc's environment loaded
 ```
 
 - Set `CMAKE_INSTALL_PREFIX`. A plain `cmake .` installs into `/usr/local`, and `make install` then fails there
