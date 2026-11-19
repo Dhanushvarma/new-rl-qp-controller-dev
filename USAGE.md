@@ -5,14 +5,25 @@ slot 3 and safety guards for every slot. What changed: [CHANGELOG.md](CHANGELOG.
 
 ## Build and install
 
+Install it into a folder of its own, next to the `hrp5p` branch's build of the same controller (no root needed):
+
 ```bash
-cmake -B build -DCMAKE_INSTALL_PREFIX=<prefix>
+cmake -B build -DCMAKE_INSTALL_PREFIX=$HOME/nrq-tracking -DMC_RTC_HONOR_INSTALL_PREFIX=ON -DCMAKE_BUILD_TYPE=RelWithDebInfo
 cmake --build build -j
 cmake --install build
+LD_LIBRARY_PATH=$HOME/nrq-tracking/lib ldd $HOME/nrq-tracking/lib/mc_controller/NewRLQPController_controller.so \
+  | grep "not found"   # prints nothing
 ```
 
-- The controller has the same name as the `hrp5p` branch's (`NewRLQPController`). Installing into the same prefix
-  replaces that build, so back it up first or install into another prefix.
+- Set `CMAKE_INSTALL_PREFIX`. A plain `cmake .` installs into `/usr/local`, and `make install` then fails there
+  without root ("file INSTALL cannot make directory .../share/NewRLQPController/policy").
+- `-DMC_RTC_HONOR_INSTALL_PREFIX=ON` keeps the controller library in that prefix with its policies and motions. Without
+  it, mc_rtc's CMake macros install the library into mc_rtc's own prefix, over the `hrp5p` branch's
+  `NewRLQPController`, which has the same name.
+- Build in a separate folder (`-B build`). If `cmake .` was run in the repository, remove its `CMakeCache.txt` and
+  `CMakeFiles/` first.
+- To replace the `hrp5p` branch's build instead, install into mc_rtc's prefix (`pkg-config --variable=prefix mc_rtc`).
+  Back that build up first.
 - Installed files:
   - the controller;
   - its config, `<prefix>/lib/mc_controller/etc/NewRLQPController.yaml`;
@@ -21,7 +32,17 @@ cmake --install build
 
 ## Run
 
-- `mc_rtc.yaml`: `MainRobot: HRP5P`, `Enabled: NewRLQPController`.
+- In the shell that starts mc_rtc: `export LD_LIBRARY_PATH=$HOME/nrq-tracking/lib:$LD_LIBRARY_PATH`. The controller
+  loads `libNewRLQPController.so` and onnxruntime from there.
+- An `mc_rtc.yaml` of its own, so that going back to the `hrp5p` branch's controller is a file swap:
+
+  ```yaml
+  MainRobot: HRP5P
+  Enabled: NewRLQPController
+  ClearControllerModulePath: true    # hides the other NewRLQPController
+  ControllerModulePaths: [/home/<user>/nrq-tracking/lib/mc_controller]
+  ```
+
 - The controller starts disarmed on `default_policy_index` (0).
 - Policies step every 20 ms at a 2 or 5 ms tick. The robot PC runs at 5 ms.
 
